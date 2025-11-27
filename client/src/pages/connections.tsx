@@ -48,6 +48,8 @@ const ACTIVITY_HISTORY = [
     avatar: imgMan,
     status: "approved",
     type: "received",
+    eventType: "approved_request",
+    context: "via Jordan Lee",
     timestamp: "2d ago"
   },
   {
@@ -56,6 +58,8 @@ const ACTIVITY_HISTORY = [
     avatar: imgWoman,
     status: "pending",
     type: "sent",
+    eventType: "pending_request",
+    context: "via Casey West",
     timestamp: "3d ago"
   },
   {
@@ -64,6 +68,8 @@ const ACTIVITY_HISTORY = [
     avatar: imgPerson,
     status: "declined",
     type: "received",
+    eventType: "declined_request",
+    context: "request declined",
     timestamp: "4d ago"
   },
   {
@@ -72,6 +78,8 @@ const ACTIVITY_HISTORY = [
     avatar: imgPerson,
     status: "approved",
     type: "sent",
+    eventType: "approved_request",
+    context: "via Casey West",
     timestamp: "1w ago"
   },
   {
@@ -80,6 +88,8 @@ const ACTIVITY_HISTORY = [
     avatar: imgMan,
     status: "pending",
     type: "received",
+    eventType: "pending_request",
+    context: "introduction pending",
     timestamp: "1w ago"
   }
 ];
@@ -221,21 +231,36 @@ export default function ConnectionsPage() {
                 filteredHistory.map((item) => (
                   <motion.div
                     key={item.id}
-                    className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex items-center justify-between hover:shadow-md hover:border-primary/20 transition-all"
+                    className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 hover:shadow-md hover:border-primary/20 transition-all"
                     whileHover={{ scale: 1.01 }}
                   >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
-                        <AvatarImage src={item.avatar} />
-                        <AvatarFallback>{item.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-bold text-foreground">{item.name}</h3>
-                        <p className="text-xs text-muted-foreground">{item.timestamp}</p>
+                    <div className="flex items-start gap-3 justify-between">
+                      <div className="flex items-start gap-3 flex-1">
+                        <Avatar className="w-12 h-12 border-2 border-white shadow-sm shrink-0 mt-0.5">
+                          <AvatarImage src={item.avatar} />
+                          <AvatarFallback>{item.name[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-foreground text-sm">{item.name}</h3>
+                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                            {item.eventType === "approved_request" && (
+                              <>Your request to meet <span className="font-semibold text-primary">{item.name}</span> {item.context ? `${item.context}` : ""} was approved.</>
+                            )}
+                            {item.eventType === "pending_request" && (
+                              <>You requested an intro to <span className="font-semibold text-primary">{item.name}</span> {item.context ? `${item.context}` : ""}.</>
+                            )}
+                            {item.eventType === "declined_request" && (
+                              <>Your introduction request to <span className="font-semibold text-primary">{item.name}</span> was declined.</>
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">{item.timestamp}</p>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0">
+                        <ActivityBadge status={item.status} type={item.type} />
                       </div>
                     </div>
-
-                    <ActivityBadge status={item.status} type={item.type} />
                   </motion.div>
                 ))
               ) : (
