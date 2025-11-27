@@ -336,7 +336,14 @@ export default function FriendsMap() {
       </div>
 
       {/* Bottom Sheet (Vaul Drawer) */}
-      <Drawer.Root open={isDrawerOpen} onOpenChange={setIsDrawerOpen} shouldScaleBackground>
+      <Drawer.Root 
+        open={isDrawerOpen} 
+        onOpenChange={(open) => {
+          setIsDrawerOpen(open);
+          if (!open) setSelectedNode(null);
+        }} 
+        shouldScaleBackground
+      >
         <Drawer.Trigger asChild>
             {/* Hidden trigger, we control via state */}
             <div className="hidden" />
@@ -346,71 +353,100 @@ export default function FriendsMap() {
         <AnimatePresence>
           {!isDrawerOpen && (
             <motion.div 
-              className="absolute bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t p-4 pb-8 text-center cursor-pointer z-10"
+              className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-white/50 p-4 pb-8 text-center cursor-pointer z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-[24px]"
               initial={{ y: 100 }}
               animate={{ y: 0 }}
               exit={{ y: 100 }}
               onClick={() => {
-                  // If user clicks the bar but no node selected, maybe select a random one or just hint?
-                  // For now, let's just let it be a hint.
+                  // Hint effect could go here
               }}
             >
+              <div className="mx-auto w-12 h-1.5 rounded-full bg-muted-foreground/20 mb-4" />
               <span className="text-sm font-semibold text-muted-foreground">Tap a bubble to explore connections</span>
             </motion.div>
           )}
         </AnimatePresence>
 
         <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40" />
-          <Drawer.Content className="bg-white flex flex-col rounded-t-[32px] mt-24 fixed bottom-0 left-0 right-0 z-50 max-h-[85vh]">
-            <div className="p-4 bg-white rounded-t-[32px] flex-1">
-              <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted mb-8" />
+          <Drawer.Overlay className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40" />
+          <Drawer.Content className="bg-white flex flex-col rounded-t-[32px] mt-24 fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] outline-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+            <div className="p-4 bg-white rounded-t-[32px] flex-1 overflow-y-auto">
+              {/* Handle Bar */}
+              <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted-foreground/20 mb-8" />
               
               {selectedNode && (
                 <div className="max-w-md mx-auto px-4 pb-8">
                   <div className="flex flex-col items-center text-center">
+                    
+                    {/* Avatar Section */}
                     <motion.div 
                         layoutId={`avatar-${selectedNode.id}`}
                         className="relative mb-4"
                     >
-                        <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
+                        <Avatar className="h-24 w-24 border-[4px] border-white shadow-xl ring-1 ring-black/5">
                         <AvatarImage src={selectedNode.image} />
                         <AvatarFallback>{selectedNode.name[0]}</AvatarFallback>
                         </Avatar>
-                        <div className="absolute bottom-0 right-0 bg-green-500 w-6 h-6 rounded-full border-4 border-white" />
+                        {/* Online Status Indicator */}
+                        <div className="absolute bottom-1 right-1 bg-green-400 w-5 h-5 rounded-full border-[3px] border-white shadow-sm" />
                     </motion.div>
 
-                    <h2 className="text-2xl font-bold text-foreground mb-1">{selectedNode.name}</h2>
-                    <p className="text-sm text-muted-foreground mb-6 flex items-center gap-1">
-                        {selectedNode.type === 'friend' ? 'Direct Friend' : 'Friend of Friend'}
-                        <span className="mx-1">•</span>
-                        San Francisco, CA
-                    </p>
+                    {/* Name & Meta */}
+                    <h2 className="text-2xl font-bold text-foreground mb-1 tracking-tight">{selectedNode.name}</h2>
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-8">
+                        <span className="px-2 py-0.5 bg-secondary/10 text-secondary-foreground rounded-full text-xs font-bold">
+                          {selectedNode.type === 'friend' ? 'Friend' : 'Friend of Friend'}
+                        </span>
+                        <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                        <span>Tel Aviv, Israel</span>
+                    </div>
 
-                    <div className="flex items-center gap-4 w-full justify-center mb-8">
-                        <div className="flex flex-col items-center p-3 bg-secondary/10 rounded-2xl min-w-[80px]">
-                            <span className="text-xl font-bold text-secondary-foreground">{selectedNode.mutuals}</span>
-                            <span className="text-xs text-muted-foreground font-medium">Mutuals</span>
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-2 gap-4 w-full mb-8">
+                        <div className="flex flex-col items-center justify-center p-4 bg-secondary/10 rounded-2xl border border-secondary/20">
+                            <span className="text-2xl font-bold text-secondary-foreground tabular-nums">{selectedNode.mutuals}</span>
+                            <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide mt-1">Mutuals</span>
                         </div>
-                        <div className="flex flex-col items-center p-3 bg-primary/10 rounded-2xl min-w-[80px]">
-                            <span className="text-xl font-bold text-primary">{Math.floor(Math.random() * 500) + 100}</span>
-                            <span className="text-xs text-muted-foreground font-medium">Friends</span>
+                        <div className="flex flex-col items-center justify-center p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                            <span className="text-2xl font-bold text-primary tabular-nums">{Math.floor(Math.random() * 400) + 120}</span>
+                            <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide mt-1">Friends</span>
                         </div>
                     </div>
 
-                    <p className="text-base text-foreground/80 leading-relaxed mb-8">
-                        {selectedNode.bio}
-                    </p>
-
-                    <div className="w-full space-y-3">
-                        <Button className="w-full h-12 rounded-xl text-base font-bold shadow-lg shadow-primary/20" size="lg">
-                            <UserPlus className="mr-2 h-5 w-5" />
-                            Request Introduction
-                        </Button>
-                        <Button variant="ghost" className="w-full h-12 rounded-xl text-base font-medium text-muted-foreground hover:bg-muted/50">
-                            View Full Profile
-                        </Button>
+                    {/* Bio */}
+                    <div className="w-full text-left mb-8">
+                        <h3 className="text-sm font-bold text-foreground mb-2">About</h3>
+                        <p className="text-base text-muted-foreground leading-relaxed">
+                            {selectedNode.bio}
+                        </p>
                     </div>
+
+                    {/* Mutual Friends Section */}
+                    <div className="w-full text-left mb-8">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-bold text-foreground">Mutual Friends</h3>
+                            <span className="text-xs text-muted-foreground cursor-pointer hover:text-primary transition-colors">View all</span>
+                        </div>
+                        <div className="flex items-center -space-x-3">
+                            {[...Array(3)].map((_, i) => (
+                                <div key={i} className="w-10 h-10 rounded-full border-2 border-white ring-1 ring-black/5 overflow-hidden bg-gray-100">
+                                   <img src={GENERATED_IMAGES[i % 3]} className="w-full h-full object-cover opacity-90" />
+                                </div>
+                            ))}
+                            <div className="w-10 h-10 rounded-full border-2 border-white ring-1 ring-black/5 bg-gray-50 flex items-center justify-center text-xs font-bold text-muted-foreground">
+                                +{(selectedNode.mutuals ?? 0) > 3 ? (selectedNode.mutuals ?? 0) - 3 : 0}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <Button 
+                        className="w-full h-14 rounded-2xl text-base font-bold shadow-xl shadow-primary/25 bg-gradient-to-r from-primary to-purple-500 hover:opacity-90 transition-opacity" 
+                        size="lg"
+                    >
+                        <UserPlus className="mr-2 h-5 w-5" />
+                        Request Introduction
+                    </Button>
                   </div>
                 </div>
               )}
