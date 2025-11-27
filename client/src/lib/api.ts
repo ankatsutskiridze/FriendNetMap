@@ -185,7 +185,20 @@ export function useUpdateSettings() {
         method: "PATCH",
         body: JSON.stringify(data),
       }),
-    onSuccess: () => {
+    onMutate: async (newData) => {
+      await queryClient.cancelQueries({ queryKey: ["settings"] });
+      const previous = queryClient.getQueryData<UserSettings>(["settings"]);
+      queryClient.setQueryData<UserSettings>(["settings"], (old) =>
+        old ? { ...old, ...newData } : undefined
+      );
+      return { previous };
+    },
+    onError: (err, newData, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["settings"], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
   });

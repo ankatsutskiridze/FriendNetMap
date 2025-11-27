@@ -42,10 +42,23 @@ export default function RequestIntroPage() {
   }, [selectedViaUserId, mutualFriends, friends]);
 
   const handleSend = async () => {
-    if (!currentUser || !targetUser || !selectedViaUser) {
+    if (!currentUser || !targetUser) {
       toast({
         title: "Error",
-        description: "Missing required information",
+        description: "User information not available",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const viaUser = selectedViaUserId 
+      ? (friends.find(f => f.id === selectedViaUserId) || mutualFriends.find(m => m.id === selectedViaUserId))
+      : (mutualFriends.length > 0 ? mutualFriends[0] : null);
+
+    if (!viaUser) {
+      toast({
+        title: "Error",
+        description: "Please select a mutual friend to introduce you",
         variant: "destructive"
       });
       return;
@@ -55,7 +68,7 @@ export default function RequestIntroPage() {
       await createIntroRequest.mutateAsync({
         fromUserId: currentUser.id,
         toUserId: targetUser.id,
-        viaUserId: selectedViaUser.id,
+        viaUserId: viaUser.id,
         message: message.trim() || undefined
       });
       

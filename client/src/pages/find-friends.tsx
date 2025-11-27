@@ -30,7 +30,7 @@ export default function FindFriendsPage() {
   const { data: searchResults = [], isLoading: searchLoading } = useSearchUsers(searchQuery);
   const addFriend = useAddFriend();
 
-  const inviteLink = `${window.location.origin}/auth`;
+  const inviteLink = typeof window !== "undefined" ? `${window.location.origin}/auth` : "/auth";
 
   const friendIds = new Set(friends.map(f => f.id));
 

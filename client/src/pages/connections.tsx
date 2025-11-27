@@ -48,7 +48,9 @@ export default function ConnectionsPage() {
   );
 
   const filteredActivity = activity.filter(item => {
-    return true;
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return item.status.toLowerCase().includes(query);
   });
 
   if (isLoading) {

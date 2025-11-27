@@ -41,33 +41,36 @@ export function BottomNav() {
           const Icon = item.icon;
 
           return (
-            <Link key={item.path} href={item.path}>
-              <a className="flex-1 flex flex-col items-center justify-center gap-1 h-full group">
-                <div
+            <Link 
+              key={item.path} 
+              href={item.path}
+              className="flex-1 flex flex-col items-center justify-center gap-1 h-full group"
+              data-testid={`nav-${item.label.toLowerCase()}`}
+            >
+              <div
+                className={cn(
+                  "p-1.5 rounded-xl transition-all duration-300",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground group-hover:text-primary/70"
+                )}
+              >
+                <Icon
                   className={cn(
-                    "p-1.5 rounded-xl transition-all duration-300",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground group-hover:text-primary/70"
+                    "w-6 h-6 transition-all duration-300",
+                    isActive && "fill-current"
                   )}
-                >
-                  <Icon
-                    className={cn(
-                      "w-6 h-6 transition-all duration-300",
-                      isActive && "fill-current"
-                    )}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
-                </div>
-                <span
-                  className={cn(
-                    "text-[10px] font-bold tracking-wide transition-colors duration-300",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )}
-                >
-                  {item.label}
-                </span>
-              </a>
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
+              </div>
+              <span
+                className={cn(
+                  "text-[10px] font-bold tracking-wide transition-colors duration-300",
+                  isActive ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}
