@@ -6,8 +6,8 @@ export default function WelcomePage() {
   const [, setLocation] = useLocation();
 
   const handleLogin = () => {
-    // Mock login - go to map
-    setLocation("/");
+    // Mock login - go to create profile for onboarding flow
+    setLocation("/create-profile");
   };
 
   return (
