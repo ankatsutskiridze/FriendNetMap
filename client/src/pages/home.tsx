@@ -213,10 +213,15 @@ export default function FriendsMap() {
             </div>
           </Button>
           <span className="text-xs font-medium text-muted-foreground hidden sm:block">Welcome, You</span>
-          <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm">
-            <AvatarImage src={ME.image} />
-            <AvatarFallback>ME</AvatarFallback>
-          </Avatar>
+          <div 
+            className="cursor-pointer transition-transform hover:scale-105 active:scale-95"
+            onClick={() => setLocation("/profile")}
+          >
+            <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm">
+                <AvatarImage src={ME.image} />
+                <AvatarFallback>ME</AvatarFallback>
+            </Avatar>
+          </div>
         </div>
       </header>
 
