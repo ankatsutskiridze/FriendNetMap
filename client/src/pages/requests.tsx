@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Check, X, Clock, UserCheck, UserX, Phone, MessageCircle, Instagram, ChevronRight } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -67,10 +67,24 @@ export default function RequestsPage() {
   // Confirmation Modal State
   const [confirmationModal, setConfirmationModal] = useState<{ type: "approve" | "decline"; requestId: number } | null>(null);
   const [requestStates, setRequestStates] = useState<Record<number, "approved" | "declined" | "pending">>({});
+  const [showConfirmationOnly, setShowConfirmationOnly] = useState(true);
 
-  const handleCardClick = (req: typeof SENT_REQUESTS[0]) => {
-    if (req.status === "approved") {
-      setSelectedContact(req);
+  // Auto-dismiss approve confirmation after 1.2 seconds
+  useEffect(() => {
+    if (confirmationModal?.type === "approve" && showConfirmationOnly) {
+      const timer = setTimeout(() => {
+        handleConfirmApproval();
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [confirmationModal, showConfirmationOnly]);
+
+  const handleCardClick = (req: typeof SENT_REQUESTS[0] | typeof RECEIVED_REQUESTS[0], isReceived?: boolean) => {
+    if (!isReceived && (req as typeof SENT_REQUESTS[0]).status === "approved") {
+      setSelectedContact(req as typeof SENT_REQUESTS[0]);
+      setIsConnectOpen(true);
+    } else if (isReceived && getRequestState((req as typeof RECEIVED_REQUESTS[0]).id) === "approved") {
+      setSelectedContact({ id: (req as typeof RECEIVED_REQUESTS[0]).id, name: (req as typeof RECEIVED_REQUESTS[0]).name, avatar: (req as typeof RECEIVED_REQUESTS[0]).avatar, status: "approved", timestamp: (req as typeof RECEIVED_REQUESTS[0]).timestamp } as any);
       setIsConnectOpen(true);
     }
   };
@@ -90,6 +104,7 @@ export default function RequestsPage() {
         [confirmationModal.requestId]: "approved"
       }));
       setConfirmationModal(null);
+      setShowConfirmationOnly(true);
     }
   };
 
@@ -235,22 +250,29 @@ export default function RequestsPage() {
                         <motion.div
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="flex items-start gap-3 py-2"
+                          className={cn(
+                            "flex items-center justify-between p-2 cursor-pointer hover:shadow-md hover:border-primary/20 transition-all rounded-xl",
+                            state === "approved" && "cursor-pointer active:scale-[0.98]"
+                          )}
+                          onClick={() => handleCardClick(req, true)}
                         >
-                          <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
-                            <AvatarImage src={req.avatar} />
-                            <AvatarFallback>{req.name[0]}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
+                              <AvatarImage src={req.avatar} />
+                              <AvatarFallback>{req.name[0]}</AvatarFallback>
+                            </Avatar>
+                            <div>
                               <h3 className="font-bold text-foreground">{req.name}</h3>
-                              <span className="text-xs text-muted-foreground">{req.timestamp}</span>
+                              <p className="text-xs text-muted-foreground">{req.timestamp}</p>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-0.5">
-                              Wants to meet <span className="font-semibold text-primary">{req.target}</span> via you
-                            </p>
                           </div>
-                          <StatusBadge status={state} />
+                          
+                          <div className="flex items-center gap-2">
+                            {state === "approved" && (
+                              <span className="text-xs font-bold text-primary hidden sm:block">Tap to connect</span>
+                            )}
+                            <StatusBadge status={state} />
+                          </div>
                         </motion.div>
                       )}
                     </motion.div>
@@ -422,7 +444,10 @@ export default function RequestsPage() {
                   whileTap={{ scale: 0.98 }}
                 >
                   <Button
-                    onClick={handleConfirmApproval}
+                    onClick={() => {
+                      setShowConfirmationOnly(false);
+                      handleConfirmApproval();
+                    }}
                     className="w-full h-14 rounded-2xl text-base font-bold shadow-lg shadow-green-500/25 bg-gradient-to-r from-green-500 to-emerald-500 hover:opacity-90 transition-opacity text-white"
                   >
                     Continue
