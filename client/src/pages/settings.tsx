@@ -10,8 +10,13 @@ export default function SettingsPage() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailUpdatesEnabled, setEmailUpdatesEnabled] = useState(false);
   const [fofRequestsEnabled, setFofRequestsEnabled] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleLogOut = () => {
+  const handleLogOutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleConfirmLogOut = () => {
     setLocation("/welcome");
   };
 
@@ -206,8 +211,9 @@ export default function SettingsPage() {
           className="space-y-3 pt-4 border-t border-gray-200"
         >
           <button 
-            onClick={handleLogOut}
+            onClick={handleLogOutClick}
             className="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-600 transition-colors font-bold py-3"
+            data-testid="button-logout"
           >
             <LogOut className="w-5 h-5" />
             Log Out
@@ -216,11 +222,53 @@ export default function SettingsPage() {
           <button 
             onClick={handleDeleteAccount}
             className="w-full text-center text-xs text-red-500 hover:text-red-600 transition-colors font-medium py-2"
+            data-testid="button-delete-account"
           >
             Delete Account
           </button>
         </motion.div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8"
+          >
+            <h2 className="text-2xl font-bold text-foreground text-center mb-2">Log out?</h2>
+            <p className="text-sm text-muted-foreground text-center mb-8 leading-relaxed">
+              You'll need to sign in again to access your map and connections.
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="w-full py-3 px-4 rounded-xl font-bold text-primary border-2 border-primary hover:bg-primary/5 transition-colors"
+                data-testid="button-cancel-logout"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmLogOut}
+                className="w-full py-3 px-4 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors"
+                data-testid="button-confirm-logout"
+              >
+                Log out
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }
