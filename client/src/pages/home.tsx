@@ -463,6 +463,7 @@ export default function FriendsMap() {
                     <Button 
                         className="w-full h-14 rounded-2xl text-base font-bold shadow-xl shadow-primary/25 bg-gradient-to-r from-primary to-purple-500 hover:opacity-90 transition-opacity" 
                         size="lg"
+                        onClick={() => setLocation(`/request-intro/${selectedNode.id}`)}
                     >
                         <UserPlus className="mr-2 h-5 w-5" />
                         Request Introduction
