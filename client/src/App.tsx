@@ -7,15 +7,19 @@ import Home from "@/pages/home";
 import RequestsPage from "@/pages/requests";
 import ProfilePage from "@/pages/profile";
 import NotFound from "@/pages/not-found";
+import { BottomNav } from "@/components/bottom-nav";
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/requests" component={RequestsPage} />
-      <Route path="/profile" component={ProfilePage} />
-      <Route component={NotFound} />
-    </Switch>
+    <div className="relative min-h-screen">
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/requests" component={RequestsPage} />
+        <Route path="/profile" component={ProfilePage} />
+        <Route component={NotFound} />
+      </Switch>
+      <BottomNav />
+    </div>
   );
 }
 

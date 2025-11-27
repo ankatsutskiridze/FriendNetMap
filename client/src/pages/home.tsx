@@ -371,16 +371,18 @@ export default function FriendsMap() {
         <AnimatePresence>
           {!isDrawerOpen && (
             <motion.div 
-              className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-white/50 p-4 pb-8 text-center cursor-pointer z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-[24px]"
-              initial={{ y: 100 }}
-              animate={{ y: 0 }}
-              exit={{ y: 100 }}
+              className="absolute bottom-20 left-4 right-4 bg-white/90 backdrop-blur-xl border border-white/50 p-3 pb-3 text-center cursor-pointer z-30 shadow-lg rounded-2xl"
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 20, opacity: 0 }}
               onClick={() => {
                   // Hint effect could go here
               }}
             >
-              <div className="mx-auto w-12 h-1.5 rounded-full bg-muted-foreground/20 mb-4" />
-              <span className="text-sm font-semibold text-muted-foreground">Tap a bubble to explore connections</span>
+              <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                Tap a bubble to explore connections
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
