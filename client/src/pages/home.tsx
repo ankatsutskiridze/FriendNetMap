@@ -233,19 +233,37 @@ export default function FriendsMap() {
               const targetNode = nodes.find(n => n.id === link.target);
               if (!sourceNode || !targetNode) return null;
 
+              // Calculate path
+              let d = `M ${sourceNode.x} ${sourceNode.y} L ${targetNode.x} ${targetNode.y}`;
+
+              // Add organic curve for outer connections
+              if (sourceNode.id !== 'me') {
+                  const midX = (sourceNode.x + targetNode.x) / 2;
+                  const midY = (sourceNode.y + targetNode.y) / 2;
+                  
+                  // Calculate perpendicular offset for curve
+                  // This creates a subtle spiral/vine effect
+                  const dx = targetNode.x - sourceNode.x;
+                  const dy = targetNode.y - sourceNode.y;
+                  const curveAmount = 0.2; 
+                  const cx = midX - dy * curveAmount;
+                  const cy = midY + dx * curveAmount;
+                  
+                  d = `M ${sourceNode.x} ${sourceNode.y} Q ${cx} ${cy} ${targetNode.x} ${targetNode.y}`;
+              }
+
               return (
-                <motion.line
+                <motion.path
                   key={`${link.source}-${link.target}`}
-                  x1={sourceNode.x}
-                  y1={sourceNode.y}
-                  x2={targetNode.x}
-                  y2={targetNode.y}
+                  d={d}
+                  fill="none"
                   stroke="hsl(var(--primary))"
-                  strokeWidth="1"
-                  strokeOpacity="0.15"
+                  strokeWidth="1.5"
+                  strokeOpacity="0.4"
+                  strokeLinecap="round"
                   initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 0.15 }}
-                  transition={{ duration: 1, delay: i * 0.05 }}
+                  animate={{ pathLength: 1, opacity: 0.4 }}
+                  transition={{ duration: 1.5, delay: i * 0.03, ease: "easeOut" }}
                 />
               );
             })}
