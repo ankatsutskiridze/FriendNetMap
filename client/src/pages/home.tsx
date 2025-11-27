@@ -11,6 +11,7 @@ import { useLocation } from "wouter";
 import imgWoman from "@assets/generated_images/friendly_young_woman_avatar.png";
 import imgMan from "@assets/generated_images/friendly_young_man_avatar.png";
 import imgPerson from "@assets/generated_images/friendly_person_avatar.png";
+import emptyNetworkImg from "@assets/generated_images/empty_network_illustration.png";
 
 // --- Types ---
 type NodeType = "me" | "friend" | "fof";
@@ -164,6 +165,7 @@ export default function FriendsMap() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [location, setLocation] = useLocation();
+  const hasNodes = nodes.length > 1; // Only "me" node means empty
   
   // Framer motion values for drag/pan
   const x = useMotionValue(0);
@@ -352,6 +354,20 @@ export default function FriendsMap() {
           <Navigation className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Empty State Overlay */}
+      {!hasNodes && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-white z-30">
+          <div className="text-center px-6 max-w-sm">
+            <img src={emptyNetworkImg} alt="Empty map" className="w-40 h-40 mx-auto mb-8 opacity-90" />
+            <h2 className="text-2xl font-bold text-foreground mb-2">Your map is empty</h2>
+            <p className="text-muted-foreground mb-8">Add your first friends to start building your network.</p>
+            <Button className="rounded-2xl font-bold px-8 h-12 bg-gradient-to-r from-primary to-purple-500 hover:opacity-90" data-testid="button-invite-friend">
+              Invite a friend
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Sheet (Vaul Drawer) */}
       <Drawer.Root 

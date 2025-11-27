@@ -11,6 +11,7 @@ import { Drawer } from "vaul";
 import imgWoman from "@assets/generated_images/friendly_young_woman_avatar.png";
 import imgMan from "@assets/generated_images/friendly_young_man_avatar.png";
 import imgPerson from "@assets/generated_images/friendly_person_avatar.png";
+import emptyInboxImg from "@assets/generated_images/empty_inbox_illustration.png";
 
 // Mock Data
 const RECEIVED_REQUESTS = [
@@ -194,7 +195,7 @@ export default function RequestsPage() {
               exit={{ opacity: 0, x: 20 }}
               className="space-y-4"
             >
-              {RECEIVED_REQUESTS.length > 0 ? (
+              {RECEIVED_REQUESTS.filter(req => getRequestState(req.id) !== "declined" || removingRequests.has(req.id)).length > 0 ? (
                 RECEIVED_REQUESTS.map((req) => {
                   const state = getRequestState(req.id);
                   const isRemoving = removingRequests.has(req.id);
@@ -303,7 +304,7 @@ export default function RequestsPage() {
                   );
                 })
               ) : (
-                <EmptyState message="No received requests yet" />
+                <EmptyState title="No requests yet" subtitle="When friends ask for introductions, they'll appear here." image={emptyInboxImg} />
               )}
             </motion.div>
           ) : (
@@ -344,7 +345,7 @@ export default function RequestsPage() {
                   </div>
                 ))
               ) : (
-                 <EmptyState message="No sent requests" />
+                <EmptyState title="No sent requests" subtitle="Send an introduction request from someone's mini-profile." image={emptyInboxImg} />
               )}
             </motion.div>
           )}
@@ -636,13 +637,12 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function EmptyState({ title, subtitle, image }: { title: string; subtitle: string; image?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mb-4">
-        <UserCheck className="w-8 h-8 text-muted-foreground/50" />
-      </div>
-      <p className="text-muted-foreground font-medium">{message}</p>
+    <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+      {image && <img src={image} alt={title} className="w-32 h-32 mb-6 opacity-90" />}
+      <h3 className="text-lg font-bold text-foreground mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground">{subtitle}</p>
     </div>
   );
 }

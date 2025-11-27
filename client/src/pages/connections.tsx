@@ -11,6 +11,8 @@ import { useLocation } from "wouter";
 import imgWoman from "@assets/generated_images/friendly_young_woman_avatar.png";
 import imgMan from "@assets/generated_images/friendly_young_man_avatar.png";
 import imgPerson from "@assets/generated_images/friendly_person_avatar.png";
+import emptyNetworkImg from "@assets/generated_images/empty_network_illustration.png";
+import emptyHistoryImg from "@assets/generated_images/empty_history_illustration.png";
 
 // Mock data for connections (approved introductions)
 const CONNECTIONS = [
@@ -216,7 +218,7 @@ export default function ConnectionsPage() {
                   </motion.button>
                 ))
               ) : (
-                <EmptyState message="No connections yet" />
+                <EmptyState title="No connections yet" subtitle="Your approved introductions will show up here." image={emptyNetworkImg} />
               )}
             </motion.div>
           ) : (
@@ -264,7 +266,7 @@ export default function ConnectionsPage() {
                   </motion.div>
                 ))
               ) : (
-                <EmptyState message="No activity yet" />
+                <EmptyState title="No history yet" subtitle="As you send and receive introductions, you'll see them here." image={emptyHistoryImg} />
               )}
             </motion.div>
           )}
@@ -312,17 +314,16 @@ function ActivityBadge({ status, type }: { status: string; type: string }) {
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function EmptyState({ title, subtitle, image }: { title: string; subtitle: string; image?: string }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex flex-col items-center justify-center py-16 text-center"
+      className="flex flex-col items-center justify-center py-16 text-center px-4"
     >
-      <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mb-4">
-        <UserCheck className="w-8 h-8 text-muted-foreground/50" />
-      </div>
-      <p className="text-muted-foreground font-medium">{message}</p>
+      {image && <img src={image} alt={title} className="w-32 h-32 mb-6 opacity-90" />}
+      <h3 className="text-lg font-bold text-foreground mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground">{subtitle}</p>
     </motion.div>
   );
 }
