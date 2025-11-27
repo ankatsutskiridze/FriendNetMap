@@ -4,6 +4,7 @@ import { ChevronRight, Bell, Users, LogOut, Trash2, Mail, HelpCircle, Info, Shie
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 
 export default function SettingsPage() {
   const [, setLocation] = useLocation();
@@ -11,13 +12,15 @@ export default function SettingsPage() {
   const [emailUpdatesEnabled, setEmailUpdatesEnabled] = useState(false);
   const [fofRequestsEnabled, setFofRequestsEnabled] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { logout } = useAuth();
 
   const handleLogOutClick = () => {
     setShowLogoutConfirm(true);
   };
 
-  const handleConfirmLogOut = () => {
-    setLocation("/welcome");
+  const handleConfirmLogOut = async () => {
+    await logout();
+    setShowLogoutConfirm(false);
   };
 
   const handleDeleteAccount = () => {

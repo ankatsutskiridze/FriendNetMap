@@ -3,36 +3,50 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 import Home from "@/pages/home";
 import RequestsPage from "@/pages/requests";
 import ConnectionsPage from "@/pages/connections";
 import ProfilePage from "@/pages/profile";
 import SettingsPage from "@/pages/settings";
 import EditProfilePage from "@/pages/edit-profile";
-import CreateProfilePage from "@/pages/create-profile";
-import AddSocialsPage from "@/pages/add-socials";
-import OnboardingSuccessPage from "@/pages/onboarding-success";
 import RequestIntroPage from "@/pages/request-intro";
 import FindFriendsPage from "@/pages/find-friends";
-import WelcomePage from "@/pages/welcome";
+import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 import { BottomNav } from "@/components/bottom-nav";
 import { useLocation } from "wouter";
 
 function Router() {
+  const { user, loading } = useAuth();
   const [location] = useLocation();
-  
-  // Hide BottomNav on Welcome and Onboarding pages
-  const showBottomNav = !["/welcome", "/create-profile", "/add-socials", "/onboarding-success"].includes(location);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent mb-2">
+            Friends Map
+          </h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  // Hide BottomNav on certain pages
+  const showBottomNav = !["/profile/edit", "/request-intro"].some((path) =>
+    location.startsWith(path)
+  );
 
   return (
     <div className="relative min-h-screen">
       <Switch>
         <Route path="/" component={Home} />
-        <Route path="/welcome" component={WelcomePage} />
-        <Route path="/create-profile" component={CreateProfilePage} />
-        <Route path="/add-socials" component={AddSocialsPage} />
-        <Route path="/onboarding-success" component={OnboardingSuccessPage} />
         <Route path="/requests" component={RequestsPage} />
         <Route path="/connections" component={ConnectionsPage} />
         <Route path="/profile" component={ProfilePage} />
@@ -50,10 +64,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
