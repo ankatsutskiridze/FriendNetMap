@@ -11,51 +11,114 @@ export default function WelcomePage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-white p-6 font-sans relative overflow-hidden">
+    <div className="min-h-screen w-full flex flex-col items-center justify-between bg-gradient-to-br from-blue-50 via-purple-50 to-white p-6 font-sans relative overflow-hidden">
       
       {/* Decorative background elements */}
       <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
       <div className="absolute bottom-[-10%] left-[-10%] w-80 h-80 bg-secondary/10 rounded-full blur-3xl" />
 
+      {/* Top spacer */}
+      <div className="h-12" />
+
+      {/* Main content */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="flex flex-col items-center text-center max-w-sm w-full z-10"
+        className="flex flex-col items-center text-center max-w-sm w-full z-10 flex-1 justify-center"
       >
-        {/* App Icon / Logo Placeholder */}
-        <div className="w-20 h-20 bg-white rounded-3xl shadow-lg shadow-primary/10 flex items-center justify-center mb-8 rotate-3">
+        {/* App Icon / Logo */}
+        <motion.div 
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.1, type: "spring", damping: 12 }}
+          className="w-20 h-20 bg-white rounded-3xl shadow-lg shadow-primary/20 flex items-center justify-center mb-8"
+        >
           <div className="w-12 h-12 bg-gradient-to-tr from-primary to-purple-400 rounded-xl" />
-        </div>
+        </motion.div>
 
-        <h1 className="text-4xl font-bold text-foreground mb-3 tracking-tight">Welcome</h1>
-        <p className="text-lg text-muted-foreground mb-12 leading-relaxed">
+        {/* Title */}
+        <motion.h1 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="text-5xl font-bold text-foreground mb-4 tracking-tight"
+        >
+          Welcome
+        </motion.h1>
+
+        {/* Subtitle */}
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-lg text-muted-foreground mb-16 leading-relaxed"
+        >
           Find friends through trusted introductions.
-        </p>
+        </motion.p>
 
-        <div className="w-full space-y-4 mb-12">
-          <Button 
-            className="w-full h-14 rounded-2xl bg-white text-foreground border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all text-base font-bold flex items-center justify-center gap-3"
-            onClick={handleLogin}
+        {/* Login Buttons */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="w-full space-y-3 mb-6"
+        >
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            <GoogleIcon className="w-5 h-5" />
-            Continue with Google
-          </Button>
+            <Button 
+              className="w-full h-16 rounded-2xl bg-white text-foreground border-2 border-gray-200 hover:border-primary/30 hover:bg-primary/5 shadow-sm transition-all text-base font-bold flex items-center justify-center gap-3"
+              onClick={handleLogin}
+            >
+              <GoogleIcon className="w-6 h-6" />
+              Continue with Google
+            </Button>
+          </motion.div>
 
-          <Button 
-            className="w-full h-14 rounded-2xl bg-black text-white hover:bg-gray-900 shadow-md transition-all text-base font-bold flex items-center justify-center gap-3"
-            onClick={handleLogin}
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            <AppleIcon className="w-5 h-5 fill-current" />
-            Continue with Apple
-          </Button>
-        </div>
+            <Button 
+              className="w-full h-16 rounded-2xl bg-gradient-to-r from-gray-900 to-black text-white hover:from-gray-800 hover:to-gray-900 shadow-lg shadow-black/20 transition-all text-base font-bold flex items-center justify-center gap-3"
+              onClick={handleLogin}
+            >
+              <AppleIcon className="w-6 h-6 fill-current" />
+              Continue with Apple
+            </Button>
+          </motion.div>
+        </motion.div>
 
-        <button className="text-xs text-muted-foreground hover:text-primary transition-colors font-medium">
-            Privacy Policy
-        </button>
-
+        {/* Email signin link */}
+        <motion.button 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          onClick={handleLogin}
+          className="text-sm text-primary hover:text-primary/80 transition-colors font-semibold mb-8"
+        >
+          Sign in with email
+        </motion.button>
       </motion.div>
+
+      {/* Bottom legal text */}
+      <motion.p 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6 }}
+        className="text-xs text-muted-foreground text-center max-w-sm leading-relaxed"
+      >
+        By continuing you agree to our{" "}
+        <button className="text-primary hover:underline font-semibold transition-colors">
+          Terms of Service
+        </button>
+        {" "}and{" "}
+        <button className="text-primary hover:underline font-semibold transition-colors">
+          Privacy Policy
+        </button>
+      </motion.p>
     </div>
   );
 }
