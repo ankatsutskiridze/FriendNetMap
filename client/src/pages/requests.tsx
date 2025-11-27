@@ -68,12 +68,18 @@ export default function RequestsPage() {
   const [confirmationModal, setConfirmationModal] = useState<{ type: "approve" | "decline"; requestId: number } | null>(null);
   const [requestStates, setRequestStates] = useState<Record<number, "approved" | "declined" | "pending">>({});
   const [showConfirmationOnly, setShowConfirmationOnly] = useState(true);
+  const [removingRequests, setRemovingRequests] = useState<Set<number>>(new Set());
 
-  // Auto-dismiss approve confirmation after 1.2 seconds
+  // Auto-dismiss confirmations after 1.2 seconds
   useEffect(() => {
     if (confirmationModal?.type === "approve" && showConfirmationOnly) {
       const timer = setTimeout(() => {
         handleConfirmApproval();
+      }, 1200);
+      return () => clearTimeout(timer);
+    } else if (confirmationModal?.type === "decline") {
+      const timer = setTimeout(() => {
+        handleConfirmDecline();
       }, 1200);
       return () => clearTimeout(timer);
     }
@@ -110,11 +116,17 @@ export default function RequestsPage() {
 
   const handleConfirmDecline = () => {
     if (confirmationModal?.type === "decline") {
-      setRequestStates(prev => ({
-        ...prev,
-        [confirmationModal.requestId]: "declined"
-      }));
+      // Mark the request for removal
+      setRemovingRequests(prev => new Set([...Array.from(prev), confirmationModal.requestId]));
       setConfirmationModal(null);
+      
+      // After animation completes, remove from state
+      setTimeout(() => {
+        setRequestStates(prev => ({
+          ...prev,
+          [confirmationModal.requestId]: "declined"
+        }));
+      }, 300);
     }
   };
 
@@ -185,11 +197,22 @@ export default function RequestsPage() {
               {RECEIVED_REQUESTS.length > 0 ? (
                 RECEIVED_REQUESTS.map((req) => {
                   const state = getRequestState(req.id);
+                  const isRemoving = removingRequests.has(req.id);
+                  
+                  // Filter out fully declined cards
+                  if (state === "declined" && !isRemoving) {
+                    return null;
+                  }
+                  
                   return (
                     <motion.div
                       key={req.id}
                       layout
+                      initial={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.92, y: 15 }}
+                      transition={{ duration: 0.3 }}
                       className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 overflow-hidden"
+                      animate={isRemoving ? { opacity: 0, scale: 0.92, y: 15 } : { opacity: 1, scale: 1, y: 0 }}
                     >
                       {state === "pending" ? (
                         <>
@@ -520,7 +543,10 @@ export default function RequestsPage() {
                   whileTap={{ scale: 0.98 }}
                 >
                   <Button
-                    onClick={handleConfirmDecline}
+                    onClick={() => {
+                      setShowConfirmationOnly(false);
+                      handleConfirmDecline();
+                    }}
                     className="w-full h-14 rounded-2xl text-base font-bold shadow-lg shadow-red-500/25 bg-gradient-to-r from-red-500 to-rose-500 hover:opacity-90 transition-opacity text-white"
                   >
                     Okay
