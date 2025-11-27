@@ -234,37 +234,63 @@ export default function FriendsMap() {
               if (!sourceNode || !targetNode) return null;
 
               // Calculate path
-              let d = `M ${sourceNode.x} ${sourceNode.y} L ${targetNode.x} ${targetNode.y}`;
+              let d = "";
 
-              // Add organic curve for outer connections
-              if (sourceNode.id !== 'me') {
-                  const midX = (sourceNode.x + targetNode.x) / 2;
-                  const midY = (sourceNode.y + targetNode.y) / 2;
-                  
-                  // Calculate perpendicular offset for curve
-                  // This creates a subtle spiral/vine effect
-                  const dx = targetNode.x - sourceNode.x;
-                  const dy = targetNode.y - sourceNode.y;
-                  const curveAmount = 0.2; 
-                  const cx = midX - dy * curveAmount;
-                  const cy = midY + dx * curveAmount;
-                  
-                  d = `M ${sourceNode.x} ${sourceNode.y} Q ${cx} ${cy} ${targetNode.x} ${targetNode.y}`;
+              if (sourceNode.id === 'me') {
+                // Center to Ring 1: Gentle S-curve or arc
+                // We can use a Quadratic curve that bends slightly
+                // Calculate a control point slightly offset from the midpoint
+                const midX = (sourceNode.x + targetNode.x) / 2;
+                const midY = (sourceNode.y + targetNode.y) / 2;
+                
+                // Offset control point perpendicular to the line
+                // This gives a slight "petal" or organic curve feel rather than rigid spoke
+                const angle = Math.atan2(targetNode.y - sourceNode.y, targetNode.x - sourceNode.x);
+                const curveIntensity = 20; // Pixel offset
+                const cpX = midX + Math.cos(angle + Math.PI / 2) * curveIntensity;
+                const cpY = midY + Math.sin(angle + Math.PI / 2) * curveIntensity;
+
+                d = `M ${sourceNode.x} ${sourceNode.y} Q ${cpX} ${cpY} ${targetNode.x} ${targetNode.y}`;
+              } else {
+                // Ring 1 to Ring 2: Branching curves
+                const midX = (sourceNode.x + targetNode.x) / 2;
+                const midY = (sourceNode.y + targetNode.y) / 2;
+                
+                // Stronger curve for outer branches to show hierarchy
+                const dx = targetNode.x - sourceNode.x;
+                const dy = targetNode.y - sourceNode.y;
+                const curveAmount = 0.25; 
+                const cx = midX - dy * curveAmount;
+                const cy = midY + dx * curveAmount;
+                
+                d = `M ${sourceNode.x} ${sourceNode.y} Q ${cx} ${cy} ${targetNode.x} ${targetNode.y}`;
               }
 
               return (
-                <motion.path
-                  key={`${link.source}-${link.target}`}
-                  d={d}
-                  fill="none"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth="1.5"
-                  strokeOpacity="0.4"
-                  strokeLinecap="round"
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 0.4 }}
-                  transition={{ duration: 1.5, delay: i * 0.03, ease: "easeOut" }}
-                />
+                <motion.g key={`${link.source}-${link.target}`}>
+                   {/* Blur shadow for depth/softness */}
+                   <motion.path
+                    d={d}
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="3"
+                    strokeOpacity="0.5"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: 0.5 }}
+                    transition={{ duration: 1.5, delay: i * 0.03 }}
+                  />
+                  <motion.path
+                    d={d}
+                    fill="none"
+                    stroke="hsl(262, 60%, 85%)" // Soft pastel lavender
+                    strokeWidth="2"
+                    strokeOpacity="0.6"
+                    strokeLinecap="round"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: 0.6 }}
+                    transition={{ duration: 1.5, delay: i * 0.03, ease: "easeOut" }}
+                  />
+                </motion.g>
               );
             })}
           </svg>
