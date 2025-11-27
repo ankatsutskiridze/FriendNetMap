@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Search, Filter, Clock, UserCheck, UserX, Send } from "lucide-react";
+import { ChevronLeft, Search, Filter, Clock, UserCheck, UserX, Send, UserPlus } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,6 +125,14 @@ export default function ConnectionsPage() {
           <h1 className="text-xl font-bold text-foreground">Connections</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full hover:bg-secondary/20 text-primary"
+            onClick={() => setLocation("/find-friends")}
+          >
+            <UserPlus className="w-6 h-6" />
+          </Button>
           <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary/20">
             <Search className="w-5 h-5 text-foreground" />
           </Button>

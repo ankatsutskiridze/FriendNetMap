@@ -55,51 +55,72 @@ const RING_2_RADIUS = 320; // Increased spacing
 const nodes: Node[] = [ME];
 const links: Link[] = [];
 
+// Load friends from localStorage
+const storedFriends = JSON.parse(localStorage.getItem("my-friends") || "[]");
+
 // Generate Ring 1 (Direct Friends)
-for (let i = 0; i < FRIENDS_COUNT; i++) {
-  const angle = (i / FRIENDS_COUNT) * 2 * Math.PI;
-  const id = `friend-${i}`;
+const allFriends = [
+  ...["Alex", "Jordan", "Taylor", "Casey", "Morgan", "Riley"].map((name, i) => ({
+    id: `friend-${i}`,
+    name,
+    image: GENERATED_IMAGES[(i + 1) % 3],
+    mutuals: 5 + i
+  })),
+  ...storedFriends // Add stored friends
+];
+
+const TOTAL_FRIENDS = allFriends.length;
+
+for (let i = 0; i < TOTAL_FRIENDS; i++) {
+  const angle = (i / TOTAL_FRIENDS) * 2 * Math.PI;
+  const friend = allFriends[i];
+  
+  // Use stored ID if available, else generate
+  const id = friend.id || `friend-${i}`;
   const x = Math.cos(angle) * RING_1_RADIUS;
   const y = Math.sin(angle) * RING_1_RADIUS;
   
   nodes.push({
     id,
     type: "friend",
-    name: ["Alex", "Jordan", "Taylor", "Casey", "Morgan", "Riley"][i],
-    image: GENERATED_IMAGES[(i + 1) % 3],
+    name: friend.name,
+    image: friend.image,
     x,
     y,
     parentId: "me",
-    bio: "Digital nomad & photographer. Always looking for the next adventure.",
-    mutuals: 5 + i,
+    bio: friend.bio || "Digital nomad & photographer. Always looking for the next adventure.",
+    mutuals: friend.mutuals || 5,
   });
   
   links.push({ source: "me", target: id });
 
-  // Generate Ring 2 (Friends of Friends)
-  // We offset the angle slightly for children so they fan out
-  for (let j = 0; j < FOF_PER_FRIEND; j++) {
-    const childId = `fof-${i}-${j}`;
-    // Spread slightly around the parent's angle
-    // (j - (total-1)/2) centers the fan around the parent
-    const spread = 0.35; 
-    const childAngle = angle + (j - (FOF_PER_FRIEND - 1) / 2) * spread; 
-    const cx = Math.cos(childAngle) * RING_2_RADIUS;
-    const cy = Math.sin(childAngle) * RING_2_RADIUS;
+  // Generate Ring 2 (Friends of Friends) only for original mock friends to keep it simple, 
+  // or for all if we want. Let's do it for first 6 to avoid overcrowding if many friends added.
+  if (i < 6) {
+      // We offset the angle slightly for children so they fan out
+      for (let j = 0; j < FOF_PER_FRIEND; j++) {
+        const childId = `fof-${i}-${j}`;
+        // Spread slightly around the parent's angle
+        // (j - (total-1)/2) centers the fan around the parent
+        const spread = 0.35; 
+        const childAngle = angle + (j - (FOF_PER_FRIEND - 1) / 2) * spread; 
+        const cx = Math.cos(childAngle) * RING_2_RADIUS;
+        const cy = Math.sin(childAngle) * RING_2_RADIUS;
 
-    nodes.push({
-      id: childId,
-      type: "fof",
-      name: ["Sam", "Jamie", "Robin", "Drew", "Quinn", "Avery", "Cameron", "Skyler", "Reese", "Dakota", "River", "Sage", "Peyton", "Hayden", "Blake", "Charlie", "Finley", "Rowan"][i * 3 + j],
-      image: GENERATED_IMAGES[(i * 3 + j + 2) % 3],
-      x: cx,
-      y: cy,
-      parentId: id,
-      bio: "Tech enthusiast and weekend baker. Let's connect!",
-      mutuals: Math.floor(Math.random() * 5) + 1,
-    });
+        nodes.push({
+          id: childId,
+          type: "fof",
+          name: ["Sam", "Jamie", "Robin", "Drew", "Quinn", "Avery", "Cameron", "Skyler", "Reese", "Dakota", "River", "Sage", "Peyton", "Hayden", "Blake", "Charlie", "Finley", "Rowan"][i * 3 + j] || "Friend",
+          image: GENERATED_IMAGES[(i * 3 + j + 2) % 3],
+          x: cx,
+          y: cy,
+          parentId: id,
+          bio: "Tech enthusiast and weekend baker. Let's connect!",
+          mutuals: Math.floor(Math.random() * 5) + 1,
+        });
 
-    links.push({ source: id, target: childId });
+        links.push({ source: id, target: childId });
+      }
   }
 }
 

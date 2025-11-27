@@ -1,0 +1,49 @@
+Redesign the “Add Friend” flow. 
+I do NOT want a form to manually create a new contact. 
+Instead, I want to add an existing user of the app as my friend.
+
+Create a new screen called “Find Friends” with this behavior and layout:
+
+1. Entry point:
+   - When the user taps “Add Friend” in the bottom navigation or Connections tab,
+     open the “Find Friends” screen instead of the manual form.
+
+2. Top search bar:
+   - Full-width rounded search field at the top.
+   - Placeholder: “Search people by name…”
+   - Include a search icon on the left.
+
+3. Suggested users list:
+   - Below the search bar, show a vertical list of existing app users.
+   - Each row should include:
+       • Circular avatar
+       • Full name
+       • Small subtitle line with mutual friends, e.g. “5 mutual friends”
+       • On the right: a small rounded button:
+            - If not connected yet → label: “Add”
+            - If a request was already sent → label: “Requested”
+   - The list should scroll.
+
+4. Add action:
+   - When the user taps the “Add” button:
+       • Brief visual feedback (button changes to “Added” with a checkmark).
+       • This person should now be considered a direct friend of the current user.
+       • In the Map screen, their bubble should appear in the first ring around “You”
+         using the same style as other direct friends.
+
+5. Mini-profile:
+   - Tapping anywhere on a user row (not the Add button) opens the existing mini-profile
+     bottom sheet for that user, with the option “Request introduction” if relevant.
+
+6. Optional filters:
+   - Under the search bar, add small filter chips:
+        • “All”
+        • “Friends of friends”
+        • “People you may know”
+   - Selected filter uses the primary purple color.
+
+Visual style:
+- Use the same pastel gradients, rounded cards, and typography as the Friends Map,
+  Requests, and Connections screens.
+- The screen should feel like a clean “people finder” inside a social app,
+  not like a contact form.

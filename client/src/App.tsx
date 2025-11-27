@@ -13,6 +13,7 @@ import CreateProfilePage from "@/pages/create-profile";
 import AddSocialsPage from "@/pages/add-socials";
 import OnboardingSuccessPage from "@/pages/onboarding-success";
 import RequestIntroPage from "@/pages/request-intro";
+import FindFriendsPage from "@/pages/find-friends";
 import WelcomePage from "@/pages/welcome";
 import NotFound from "@/pages/not-found";
 import { BottomNav } from "@/components/bottom-nav";
@@ -38,6 +39,7 @@ function Router() {
         <Route path="/settings" component={SettingsPage} />
         <Route path="/profile/edit" component={EditProfilePage} />
         <Route path="/request-intro/:id" component={RequestIntroPage} />
+        <Route path="/find-friends" component={FindFriendsPage} />
         <Route component={NotFound} />
       </Switch>
       {showBottomNav && <BottomNav />}
