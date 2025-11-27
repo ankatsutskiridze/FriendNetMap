@@ -1,0 +1,166 @@
+
+You already analyzed my “Friends Map” app.
+Now I want you to finish the product: replace all mock data with real backend APIs and wire every screen to real data and actions.
+
+Tech assumptions (adopt or adjust to my project):
+	•	Frontend: the existing Replit App (React/TypeScript or the current generated stack).
+	•	Backend: build a simple REST API inside this Replit project (Node/Express or the default server in server.ts / index.ts).
+	•	Use one data store (Replit DB / SQLite / Postgres, whatever is already configured in the project). Just be consistent.
+	•	Keep all existing UI and styling. Only change logic / data wiring unless something is obviously broken.
+
+⸻
+
+1. Create / verify backend models & routes
+
+Implement or confirm these core entities and tables/models:
+	•	User: id, name, email, username, location, bio, avatarUrl, social links (instagram, whatsapp, facebook), password hash, createdAt, updatedAt.
+	•	Friendship: id, userId, friendId, status (accepted, pending), createdAt.
+	•	IntroRequest: id, fromUserId, toUserId, viaUserId (the mutual friend), status (pending, approved, declined), message, createdAt, updatedAt.
+	•	Activity / History Event: id, userId, type, payload (JSON), createdAt (for the history tab).
+	•	Preferences / Settings: id, userId, notificationsEnabled, emailUpdates, introRequestsEnabled, etc.
+	•	BlockList (optional for now): id, userId, blockedUserId, createdAt.
+
+Then implement these API routes (adjust file names to our backend structure):
+
+Auth:
+	•	POST /api/auth/signup – create user, hash password, return session/token.
+	•	POST /api/auth/login – login by email/password.
+	•	POST /api/auth/logout – already used by the app, make sure it works with the auth system.
+	•	GET /api/auth/me – return currently logged-in user.
+
+Users & Profile:
+	•	GET /api/users – search users by name/username (for Find Friends).
+	•	GET /api/users/:id – get user by id (for Request Intro page).
+	•	PATCH /api/users/:id – update profile, bio, location, avatarUrl, socials, etc. Only allow self.
+
+Friends & Connections:
+	•	GET /api/friends – list my friends.
+	•	POST /api/friends/:friendId – add friend / accept friend, depending on flow (simplify as needed).
+
+Intro Requests (Introductions):
+	•	GET /api/intro-requests/received – intro requests sent to me.
+	•	GET /api/intro-requests/sent – intro requests I initiated.
+	•	POST /api/intro-requests – create new intro request (from, to, via, message).
+	•	POST /api/intro-requests/:id/approve – approve intro.
+	•	POST /api/intro-requests/:id/decline – decline intro.
+
+Settings / Preferences:
+	•	GET /api/settings – get my preferences.
+	•	PATCH /api/settings – update preferences / notification toggles.
+
+It’s OK to keep the data model minimal at first but the above structure should be supported.
+
+⸻
+
+2. Connect each frontend page to the backend
+
+Go through every listed page and:
+	•	Remove/replace mock data (MOCK_USERS, SUGGESTED_USERS, CONNECTIONS, RECEIVED_REQUESTS, etc.).
+	•	Add proper data fetching with loading + error states.
+	•	Wire buttons to call the correct API endpoints.
+	•	Make sure navigation and state stay in sync with the backend responses.
+
+2.1 Home Page – Friends Map (/)
+	•	Replace hardcoded “You” and static friends with real data:
+	•	Fetch current user from GET /api/auth/me.
+	•	Fetch friends from GET /api/friends.
+	•	Compute friends-of-friends from the real friends list or add a dedicated endpoint if needed.
+	•	Keep the existing UI, bubble map and mini profile drawer.
+	•	Add a loading state while data is fetching and an error state if the API fails.
+
+2.2 Requests Page (/requests)
+	•	Replace RECEIVED_REQUESTS and SENT_REQUESTS arrays with:
+	•	GET /api/intro-requests/received
+	•	GET /api/intro-requests/sent
+	•	When user taps Approve or Decline:
+	•	Call POST /api/intro-requests/:id/approve or POST /api/intro-requests/:id/decline.
+	•	Optimistically update the UI and then refetch the relevant list or update local state.
+	•	Preserve the current UI: tabs, cards, status badges, confirmation modals, empty states.
+	•	Add pagination support placeholder or simple “load more” if the API supports it.
+
+2.3 Connections Page (/connections)
+	•	Replace CONNECTIONS and ACTIVITY_HISTORY mock arrays by:
+	•	Fetch friends from GET /api/friends.
+	•	Fetch history/activity from a new endpoint, e.g. GET /api/activity or reuse intro requests.
+	•	Keep the search and filters, but make them work against the real data.
+	•	Add real timestamps to events and display them in the history tab.
+
+2.4 Profile Page (/profile)
+	•	Load the logged-in user via GET /api/auth/me instead of the hardcoded “Sara Jenkins”.
+	•	Stats (friends, mutuals, etc.) should be calculated from real friends data or via an endpoint like GET /api/friends/stats.
+	•	Ensure the Edit button navigates to /profile/edit and that it uses the same user id as the authenticated user.
+
+2.5 Edit Profile Page (/profile/edit)
+	•	On mount, fetch the current user (/api/auth/me or GET /api/users/:id) and prefill the form.
+	•	When saving, call PATCH /api/users/:id with updated name, location, bio, social links, etc.
+	•	Implement:
+	•	Form validation (required fields like name, email).
+	•	Loading/disabled state on save.
+	•	Error handling and success toasts using the existing toast UI.
+	•	Hook up the avatar/photo change UI to upload an image:
+	•	Either implement real upload (e.g. to a storage bucket) or a simplified solution (base64 / placeholder) depending on what’s available in this Replit template.
+
+2.6 Find Friends Page (/find-friends)
+	•	Replace SUGGESTED_USERS with actual API calls:
+	•	GET /api/users?search=<query> for search.
+	•	Default suggestions from /api/users (excluding current user).
+	•	Make the filter chips (All, Friends of Friends) actually filter the real data.
+	•	When user taps Add:
+	•	Call POST /api/friends/:friendId.
+	•	Update local state and ensure the Home Map picks up new friends on next open (or immediately if data is shared via a store).
+	•	Keep the invite sheet UI, but wire the SMS/link share actions so they use real data where possible (or leave as TODOs clearly marked in comments).
+
+2.7 Request Intro Page (/request-intro/:id)
+	•	Use the :id route param to fetch the target user:
+	•	GET /api/users/:id.
+	•	When the user sends the intro request:
+	•	Call POST /api/intro-requests with { toUserId, message, viaUserId (if applicable) }.
+	•	Show loading state and success/error feedback.
+	•	On success, redirect back to /requests or show a confirmation state.
+
+2.8 Settings Page (/settings)
+	•	Replace local-only toggles with real persisted settings:
+	•	On mount: GET /api/settings.
+	•	On change: PATCH /api/settings.
+	•	Wire these sections:
+	•	Help & FAQ – link to a placeholder route or external URL.
+	•	Contact Support – open mailto or simple contact form endpoint.
+	•	Block List / Privacy Settings – read/write to the blocklist table or a basic blockedUsers field for now.
+	•	Change Email – add a simple email change flow using PATCH /api/users/:id (with validation).
+	•	Make Delete Account actually call an endpoint like DELETE /api/users/:id, then log the user out and redirect to onboarding. If full deletion is too heavy, at least mark the account as deactivated.
+	•	Keep the logout behavior with POST /api/auth/logout.
+
+2.9 Auth / Onboarding Pages (/login, /signup, /onboarding)
+	•	Hook up the forms to:
+	•	POST /api/auth/signup
+	•	POST /api/auth/login
+	•	Add form validation, error messages (wrong password, existing email, etc.).
+	•	On successful login or signup, redirect to / (Home – Friends Map).
+	•	If a session already exists (GET /api/auth/me), skip login and redirect to /.
+
+⸻
+
+3. General improvements
+	•	Make sure every fetch call has:
+	•	Loading state
+	•	Error state with user-friendly message
+	•	Basic retry where appropriate
+	•	Refactor duplicate fetching logic into reusable hooks or utilities if the codebase structure allows it.
+	•	Remove all unused mock constants and dead code once the real API connections are working.
+	•	Keep TypeScript types in sync with the backend models (User, Friend, IntroRequest, Settings, etc.).
+
+⸻
+
+4. What to show me at the end
+
+When you finish:
+	•	Summarize all backend endpoints you created or modified.
+	•	Summarize for each page:
+	•	What changed
+	•	What data it now uses
+	•	Any TODOs left for future work (e.g., advanced privacy, real image storage, pagination).
+	•	Point out any environment variables or secrets I need to set in Replit for this to run.
+
+Start implementing this step-by-step. Make sure the app runs end-to-end with a real signup → login → add friends → send/approve intro → see connections/history flow.
+
+⸻
