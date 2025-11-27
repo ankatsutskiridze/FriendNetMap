@@ -353,53 +353,98 @@ export default function RequestsPage() {
       {/* Connect Drawer */}
       <Drawer.Root open={isConnectOpen} onOpenChange={setIsConnectOpen} shouldScaleBackground>
         <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" />
-          <Drawer.Content className="bg-white flex flex-col rounded-t-[32px] mt-24 fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] outline-none">
-            <div className="p-4 bg-white/50 backdrop-blur-xl rounded-t-[32px] flex-1">
-              <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted-foreground/20 mb-8" />
+          <Drawer.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-md z-50" />
+          <Drawer.Content className="bg-white flex flex-col rounded-t-3xl fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] outline-none shadow-2xl">
+            <div className="p-6 bg-white rounded-t-3xl flex-1 overflow-y-auto">
+              {/* Drag Handle */}
+              <div className="flex justify-center mb-6">
+                <div className="w-12 h-1 rounded-full bg-gray-200" />
+              </div>
               
               {selectedContact && (
-                <div className="max-w-md mx-auto px-4 pb-8">
-                  <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-foreground mb-1">Connect With {selectedContact.name}</h2>
-                    <p className="text-sm text-muted-foreground">Choose how you want to reach out</p>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="max-w-md mx-auto pb-6"
+                >
+                  {/* Header */}
+                  <div className="text-center mb-8 space-y-2">
+                    <motion.h2 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.1 }}
+                      className="text-3xl font-bold text-foreground"
+                    >
+                      Connect with {selectedContact.name}
+                    </motion.h2>
+                    <motion.p 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="text-base text-muted-foreground"
+                    >
+                      Choose how you want to reach out
+                    </motion.p>
                   </div>
 
+                  {/* Connection Options */}
                   <div className="space-y-3">
                     {/* WhatsApp */}
-                    <button className="w-full flex items-center justify-between p-4 bg-[#E7FCEB] rounded-2xl border border-transparent hover:border-[#25D366]/30 transition-all group">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center shadow-sm text-white">
-                                <MessageCircle className="w-6 h-6" fill="currentColor" />
-                            </div>
-                            <span className="text-lg font-bold text-[#075E54]">WhatsApp</span>
+                    <motion.button
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full flex items-center justify-between p-5 bg-[#E7FCEB] border-2 border-[#25D366]/20 rounded-2xl hover:border-[#25D366]/40 hover:bg-[#E7FCEB]/80 transition-all group active:scale-95"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-full bg-[#25D366] flex items-center justify-center shadow-md text-white">
+                          <MessageCircle className="w-7 h-7" fill="currentColor" />
                         </div>
-                        <ChevronRight className="w-5 h-5 text-[#25D366] group-hover:translate-x-1 transition-transform" />
-                    </button>
+                        <span className="text-lg font-bold text-[#075E54]">WhatsApp</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-[#25D366] group-hover:translate-x-1 transition-transform" />
+                    </motion.button>
 
                     {/* Instagram */}
-                    <button className="w-full flex items-center justify-between p-4 bg-[#FDF2F8] rounded-2xl border border-transparent hover:border-[#E1306C]/30 transition-all group">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center shadow-sm text-white">
-                                <Instagram className="w-6 h-6" />
-                            </div>
-                            <span className="text-lg font-bold text-[#8134AF]">Instagram</span>
+                    <motion.button
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full flex items-center justify-between p-5 bg-[#FDF2F8] border-2 border-[#E1306C]/20 rounded-2xl hover:border-[#E1306C]/40 hover:bg-[#FDF2F8]/80 transition-all group active:scale-95"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center shadow-md text-white">
+                          <Instagram className="w-7 h-7" />
                         </div>
-                        <ChevronRight className="w-5 h-5 text-[#E1306C] group-hover:translate-x-1 transition-transform" />
-                    </button>
+                        <span className="text-lg font-bold text-[#8134AF]">Instagram</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-[#E1306C] group-hover:translate-x-1 transition-transform" />
+                    </motion.button>
 
                     {/* Phone Call */}
-                    <button className="w-full flex items-center justify-between p-4 bg-[#EBF5FF] rounded-2xl border border-transparent hover:border-[#007AFF]/30 transition-all group">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-[#007AFF] flex items-center justify-center shadow-sm text-white">
-                                <Phone className="w-6 h-6" fill="currentColor" />
-                            </div>
-                            <span className="text-lg font-bold text-[#0040DD]">Phone Call</span>
+                    <motion.button
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full flex items-center justify-between p-5 bg-[#EBF5FF] border-2 border-[#007AFF]/20 rounded-2xl hover:border-[#007AFF]/40 hover:bg-[#EBF5FF]/80 transition-all group active:scale-95"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-full bg-[#007AFF] flex items-center justify-center shadow-md text-white">
+                          <Phone className="w-7 h-7" fill="currentColor" />
                         </div>
-                        <ChevronRight className="w-5 h-5 text-[#007AFF] group-hover:translate-x-1 transition-transform" />
-                    </button>
+                        <span className="text-lg font-bold text-[#0040DD]">Phone Call</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-[#007AFF] group-hover:translate-x-1 transition-transform" />
+                    </motion.button>
                   </div>
-                </div>
+                </motion.div>
               )}
             </div>
           </Drawer.Content>
