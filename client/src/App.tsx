@@ -12,7 +12,6 @@ import EditProfilePage from "@/pages/edit-profile";
 import CreateProfilePage from "@/pages/create-profile";
 import AddSocialsPage from "@/pages/add-socials";
 import OnboardingSuccessPage from "@/pages/onboarding-success";
-import AddFriendPage from "@/pages/add-friend";
 import RequestIntroPage from "@/pages/request-intro";
 import WelcomePage from "@/pages/welcome";
 import NotFound from "@/pages/not-found";
@@ -33,7 +32,6 @@ function Router() {
         <Route path="/create-profile" component={CreateProfilePage} />
         <Route path="/add-socials" component={AddSocialsPage} />
         <Route path="/onboarding-success" component={OnboardingSuccessPage} />
-        <Route path="/add-friend" component={AddFriendPage} />
         <Route path="/requests" component={RequestsPage} />
         <Route path="/connections" component={ConnectionsPage} />
         <Route path="/profile" component={ProfilePage} />

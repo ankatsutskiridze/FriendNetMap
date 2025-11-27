@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Search, Filter, Clock, UserCheck, UserX, Send, Plus } from "lucide-react";
+import { ChevronLeft, Search, Filter, Clock, UserCheck, UserX, Send } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,7 +136,7 @@ export default function ConnectionsPage() {
 
       <div className="max-w-md mx-auto p-4">
         {/* Search Bar */}
-        <div className="mb-6 space-y-3">
+        <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -146,17 +146,6 @@ export default function ConnectionsPage() {
               className="pl-9 bg-white/60 border-white rounded-xl placeholder:text-muted-foreground/50"
             />
           </div>
-          
-          {/* Add Friend Shortcut */}
-          <button 
-            onClick={() => setLocation("/add-friend")}
-            className="w-full bg-white/80 backdrop-blur-sm border border-white rounded-xl p-3 flex items-center justify-center gap-2 text-primary font-bold shadow-sm hover:bg-white transition-colors group"
-          >
-            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-              <Plus className="w-4 h-4" />
-            </div>
-            Add a Friend
-          </button>
         </div>
 
         {/* Tabs */}

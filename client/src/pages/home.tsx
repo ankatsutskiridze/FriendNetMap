@@ -355,19 +355,6 @@ export default function FriendsMap() {
         </Button>
       </div>
 
-      {/* Add Friend FAB */}
-      <motion.button
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        className="absolute right-4 bottom-24 z-30 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-purple-600 shadow-lg shadow-primary/30 flex items-center justify-center text-white"
-        onClick={() => setLocation("/add-friend")}
-        data-testid="button-add-friend-fab"
-      >
-        <Plus className="w-7 h-7" />
-      </motion.button>
-
       {/* Empty State Overlay */}
       {!hasNodes && (
         <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-white z-30">
