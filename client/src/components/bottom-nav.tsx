@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Map, Inbox, User } from "lucide-react";
+import { Map, Inbox, User, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function BottomNav() {
@@ -20,6 +20,11 @@ export function BottomNav() {
       path: "/profile",
       label: "Profile",
       icon: User,
+    },
+    {
+      path: "/settings",
+      label: "Settings",
+      icon: Settings,
     },
   ];
 

@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import RequestsPage from "@/pages/requests";
 import ProfilePage from "@/pages/profile";
+import SettingsPage from "@/pages/settings";
 import EditProfilePage from "@/pages/edit-profile";
 import CreateProfilePage from "@/pages/create-profile";
 import AddSocialsPage from "@/pages/add-socials";
@@ -32,6 +33,7 @@ function Router() {
         <Route path="/onboarding-success" component={OnboardingSuccessPage} />
         <Route path="/requests" component={RequestsPage} />
         <Route path="/profile" component={ProfilePage} />
+        <Route path="/settings" component={SettingsPage} />
         <Route path="/profile/edit" component={EditProfilePage} />
         <Route path="/request-intro/:id" component={RequestIntroPage} />
         <Route component={NotFound} />
