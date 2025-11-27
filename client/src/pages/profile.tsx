@@ -83,7 +83,11 @@ export default function ProfilePage() {
           <h2 className="text-2xl font-bold text-foreground tracking-tight mb-1">Sara Jenkins</h2>
           <p className="text-sm text-muted-foreground font-medium mb-6">{user.location}</p>
           
-          <Button variant="outline" className="rounded-full border-primary/20 text-primary hover:bg-primary/5 hover:text-primary font-bold px-8 shadow-sm">
+          <Button 
+            variant="outline" 
+            className="rounded-full border-primary/20 text-primary hover:bg-primary/5 hover:text-primary font-bold px-8 shadow-sm"
+            onClick={() => setLocation("/profile/edit")}
+          >
             Edit Profile
           </Button>
         </div>
