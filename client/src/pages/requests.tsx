@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Check, X, Clock, UserCheck, UserX } from "lucide-react";
+import { ChevronLeft, Check, X, Clock, UserCheck, UserX, Phone, MessageCircle, Instagram, ChevronRight } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
+import { Drawer } from "vaul";
 
 // Reuse assets
 import imgWoman from "@assets/generated_images/friendly_young_woman_avatar.png";
@@ -58,6 +59,17 @@ const SENT_REQUESTS = [
 export default function RequestsPage() {
   const [activeTab, setActiveTab] = useState<"received" | "sent">("received");
   const [location, setLocation] = useLocation();
+  
+  // Connect Drawer State
+  const [isConnectOpen, setIsConnectOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<typeof SENT_REQUESTS[0] | null>(null);
+
+  const handleCardClick = (req: typeof SENT_REQUESTS[0]) => {
+    if (req.status === "approved") {
+      setSelectedContact(req);
+      setIsConnectOpen(true);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-white font-sans text-foreground pb-24">
@@ -171,7 +183,14 @@ export default function RequestsPage() {
             >
               {SENT_REQUESTS.length > 0 ? (
                 SENT_REQUESTS.map((req) => (
-                  <div key={req.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex items-center justify-between">
+                  <div 
+                    key={req.id} 
+                    className={cn(
+                        "bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex items-center justify-between transition-all",
+                        req.status === "approved" && "cursor-pointer hover:shadow-md hover:border-primary/20 active:scale-[0.98]"
+                    )}
+                    onClick={() => handleCardClick(req)}
+                  >
                     <div className="flex items-center gap-3">
                       <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
                         <AvatarImage src={req.avatar} />
@@ -183,7 +202,12 @@ export default function RequestsPage() {
                       </div>
                     </div>
                     
-                    <StatusBadge status={req.status} />
+                    <div className="flex items-center gap-2">
+                        {req.status === "approved" && (
+                            <span className="text-xs font-bold text-primary hidden sm:block">Tap to connect</span>
+                        )}
+                        <StatusBadge status={req.status} />
+                    </div>
                   </div>
                 ))
               ) : (
@@ -193,11 +217,68 @@ export default function RequestsPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Connect Drawer */}
+      <Drawer.Root open={isConnectOpen} onOpenChange={setIsConnectOpen} shouldScaleBackground>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" />
+          <Drawer.Content className="bg-white flex flex-col rounded-t-[32px] mt-24 fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] outline-none">
+            <div className="p-4 bg-white/50 backdrop-blur-xl rounded-t-[32px] flex-1">
+              <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted-foreground/20 mb-8" />
+              
+              {selectedContact && (
+                <div className="max-w-md mx-auto px-4 pb-8">
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-bold text-foreground mb-1">Connect With {selectedContact.name}</h2>
+                    <p className="text-sm text-muted-foreground">Choose how you want to reach out</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* WhatsApp */}
+                    <button className="w-full flex items-center justify-between p-4 bg-[#E7FCEB] rounded-2xl border border-transparent hover:border-[#25D366]/30 transition-all group">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center shadow-sm text-white">
+                                <MessageCircle className="w-6 h-6" fill="currentColor" />
+                            </div>
+                            <span className="text-lg font-bold text-[#075E54]">WhatsApp</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-[#25D366] group-hover:translate-x-1 transition-transform" />
+                    </button>
+
+                    {/* Instagram */}
+                    <button className="w-full flex items-center justify-between p-4 bg-[#FDF2F8] rounded-2xl border border-transparent hover:border-[#E1306C]/30 transition-all group">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center shadow-sm text-white">
+                                <Instagram className="w-6 h-6" />
+                            </div>
+                            <span className="text-lg font-bold text-[#8134AF]">Instagram</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-[#E1306C] group-hover:translate-x-1 transition-transform" />
+                    </button>
+
+                    {/* Phone Call */}
+                    <button className="w-full flex items-center justify-between p-4 bg-[#EBF5FF] rounded-2xl border border-transparent hover:border-[#007AFF]/30 transition-all group">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-[#007AFF] flex items-center justify-center shadow-sm text-white">
+                                <Phone className="w-6 h-6" fill="currentColor" />
+                            </div>
+                            <span className="text-lg font-bold text-[#0040DD]">Phone Call</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-[#007AFF] group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
+// ... existing StatusBadge
   const styles = {
     pending: "bg-blue-50 text-blue-600 border-blue-100",
     approved: "bg-green-50 text-green-600 border-green-100",
