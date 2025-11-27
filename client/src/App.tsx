@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import RequestsPage from "@/pages/requests";
+import ConnectionsPage from "@/pages/connections";
 import ProfilePage from "@/pages/profile";
 import SettingsPage from "@/pages/settings";
 import EditProfilePage from "@/pages/edit-profile";
@@ -32,6 +33,7 @@ function Router() {
         <Route path="/add-socials" component={AddSocialsPage} />
         <Route path="/onboarding-success" component={OnboardingSuccessPage} />
         <Route path="/requests" component={RequestsPage} />
+        <Route path="/connections" component={ConnectionsPage} />
         <Route path="/profile" component={ProfilePage} />
         <Route path="/settings" component={SettingsPage} />
         <Route path="/profile/edit" component={EditProfilePage} />
