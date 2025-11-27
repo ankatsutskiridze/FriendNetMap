@@ -8,21 +8,29 @@ import RequestsPage from "@/pages/requests";
 import ProfilePage from "@/pages/profile";
 import EditProfilePage from "@/pages/edit-profile";
 import RequestIntroPage from "@/pages/request-intro";
+import WelcomePage from "@/pages/welcome";
 import NotFound from "@/pages/not-found";
 import { BottomNav } from "@/components/bottom-nav";
+import { useLocation } from "wouter";
 
 function Router() {
+  const [location] = useLocation();
+  
+  // Hide BottomNav on Welcome page
+  const showBottomNav = location !== "/welcome";
+
   return (
     <div className="relative min-h-screen">
       <Switch>
         <Route path="/" component={Home} />
+        <Route path="/welcome" component={WelcomePage} />
         <Route path="/requests" component={RequestsPage} />
         <Route path="/profile" component={ProfilePage} />
         <Route path="/profile/edit" component={EditProfilePage} />
         <Route path="/request-intro/:id" component={RequestIntroPage} />
         <Route component={NotFound} />
       </Switch>
-      <BottomNav />
+      {showBottomNav && <BottomNav />}
     </div>
   );
 }

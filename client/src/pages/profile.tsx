@@ -152,7 +152,10 @@ export default function ProfilePage() {
             <FileText className="w-5 h-5 group-hover:text-primary transition-colors" />
             <span className="font-medium">Terms of Service</span>
           </button>
-          <button className="flex items-center gap-3 text-red-500 hover:text-red-600 transition-colors mt-2">
+          <button 
+            className="flex items-center gap-3 text-red-500 hover:text-red-600 transition-colors mt-2"
+            onClick={() => setLocation("/welcome")}
+          >
             <LogOut className="w-5 h-5" />
             <span className="font-bold">Log Out</span>
           </button>
