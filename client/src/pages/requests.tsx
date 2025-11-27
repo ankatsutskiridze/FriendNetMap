@@ -270,33 +270,34 @@ export default function RequestsPage() {
                           </div>
                         </>
                       ) : (
-                        <motion.div
+                        <motion.button
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           className={cn(
-                            "flex items-center justify-between p-2 cursor-pointer hover:shadow-md hover:border-primary/20 transition-all rounded-xl",
-                            state === "approved" && "cursor-pointer active:scale-[0.98]"
+                            "w-full flex items-center justify-between p-4 text-left bg-white rounded-2xl border border-gray-50 shadow-sm transition-all",
+                            state === "approved" && "cursor-pointer hover:shadow-md hover:border-primary/20 active:scale-[0.98]"
                           )}
                           onClick={() => handleCardClick(req, true)}
+                          disabled={state !== "approved"}
                         >
                           <div className="flex items-center gap-3">
                             <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
                               <AvatarImage src={req.avatar} />
                               <AvatarFallback>{req.name[0]}</AvatarFallback>
                             </Avatar>
-                            <div>
-                              <h3 className="font-bold text-foreground">{req.name}</h3>
+                            <div className="text-left">
+                              <h3 className="font-bold text-foreground text-sm">{req.name}</h3>
                               <p className="text-xs text-muted-foreground">{req.timestamp}</p>
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3 shrink-0">
                             {state === "approved" && (
-                              <span className="text-xs font-bold text-primary hidden sm:block">Tap to connect</span>
+                              <span className="text-xs font-bold text-primary whitespace-nowrap">Tap to connect</span>
                             )}
                             <StatusBadge status={state} />
                           </div>
-                        </motion.div>
+                        </motion.button>
                       )}
                     </motion.div>
                   );
