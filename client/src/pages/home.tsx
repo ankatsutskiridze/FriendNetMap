@@ -46,9 +46,9 @@ const ME: Node = {
 };
 
 const FRIENDS_COUNT = 6;
-const FOF_PER_FRIEND = 2; // Average friends of friends
-const RING_1_RADIUS = 140;
-const RING_2_RADIUS = 280;
+const FOF_PER_FRIEND = 3; // Increased density slightly for better visuals
+const RING_1_RADIUS = 160; // Increased spacing
+const RING_2_RADIUS = 320; // Increased spacing
 
 const nodes: Node[] = [ME];
 const links: Link[] = [];
@@ -78,16 +78,18 @@ for (let i = 0; i < FRIENDS_COUNT; i++) {
   // We offset the angle slightly for children so they fan out
   for (let j = 0; j < FOF_PER_FRIEND; j++) {
     const childId = `fof-${i}-${j}`;
-    // Small spread around the parent's angle
-    const childAngle = angle + (j - 0.5) * 0.4; 
+    // Spread slightly around the parent's angle
+    // (j - (total-1)/2) centers the fan around the parent
+    const spread = 0.35; 
+    const childAngle = angle + (j - (FOF_PER_FRIEND - 1) / 2) * spread; 
     const cx = Math.cos(childAngle) * RING_2_RADIUS;
     const cy = Math.sin(childAngle) * RING_2_RADIUS;
 
     nodes.push({
       id: childId,
       type: "fof",
-      name: ["Sam", "Jamie", "Robin", "Drew", "Quinn", "Avery", "Cameron", "Skyler", "Reese", "Dakota", "River", "Sage"][i * 2 + j],
-      image: GENERATED_IMAGES[(i * 2 + j + 2) % 3],
+      name: ["Sam", "Jamie", "Robin", "Drew", "Quinn", "Avery", "Cameron", "Skyler", "Reese", "Dakota", "River", "Sage", "Peyton", "Hayden", "Blake", "Charlie", "Finley", "Rowan"][i * 3 + j],
+      image: GENERATED_IMAGES[(i * 3 + j + 2) % 3],
       x: cx,
       y: cy,
       parentId: id,
@@ -102,9 +104,13 @@ for (let i = 0; i < FRIENDS_COUNT; i++) {
 // --- Components ---
 
 const Bubble = ({ node, isSelected, onClick }: { node: Node; isSelected: boolean; onClick: () => void }) => {
-  const size = node.type === "me" ? 80 : node.type === "friend" ? 60 : 45;
-  const fontSize = node.type === "me" ? "text-sm font-bold" : "text-xs font-medium";
+  // Enhanced sizes: Center is much larger now
+  const size = node.type === "me" ? 100 : node.type === "friend" ? 64 : 48;
+  const fontSize = node.type === "me" ? "text-sm font-bold" : node.type === "friend" ? "text-xs font-semibold" : "text-[10px] font-medium";
   
+  // Z-index hierarchy
+  const zIndex = node.type === "me" ? 30 : node.type === "friend" ? 20 : 10;
+
   return (
     <motion.div
       className="absolute flex flex-col items-center justify-center cursor-pointer touch-none"
@@ -115,16 +121,20 @@ const Bubble = ({ node, isSelected, onClick }: { node: Node; isSelected: boolean
         height: size,
         x: "-50%", // Center the div on the coordinate
         y: "-50%",
+        zIndex: isSelected ? 50 : zIndex,
       }}
-      whileHover={{ scale: 1.1 }}
+      whileHover={{ scale: 1.15 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
     >
       <motion.div
         className={cn(
-          "rounded-full p-1 shadow-md transition-all duration-300",
-          isSelected ? "ring-4 ring-primary ring-offset-2" : "ring-2 ring-white/50",
-          node.type === "me" ? "bg-primary/10" : "bg-white"
+          "rounded-full p-1 transition-all duration-500 ease-out",
+          // Selection glow effects
+          isSelected 
+            ? "ring-4 ring-primary ring-offset-4 shadow-[0_0_30px_rgba(139,92,246,0.3)]" 
+            : "ring-2 ring-white/80 shadow-sm",
+          node.type === "me" ? "bg-primary/5" : "bg-white"
         )}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -137,8 +147,9 @@ const Bubble = ({ node, isSelected, onClick }: { node: Node; isSelected: boolean
       </motion.div>
       
       <span className={cn(
-        "absolute top-full mt-1 px-2 py-0.5 rounded-full bg-white/80 backdrop-blur-sm text-foreground shadow-sm whitespace-nowrap pointer-events-none select-none",
-        fontSize
+        "absolute top-full mt-2 px-2.5 py-0.5 rounded-full bg-white/90 backdrop-blur-md text-foreground shadow-sm whitespace-nowrap pointer-events-none select-none border border-white/50",
+        fontSize,
+        isSelected && "font-bold text-primary"
       )}>
         {node.name}
       </span>
@@ -147,7 +158,7 @@ const Bubble = ({ node, isSelected, onClick }: { node: Node; isSelected: boolean
 };
 
 export default function FriendsMap() {
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(0.9); // Start slightly zoomed out to see more
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -156,8 +167,8 @@ export default function FriendsMap() {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.2, 2));
-  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.2, 0.5));
+  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.2, 2.5));
+  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.2, 0.4));
   const handleRecenter = () => {
     x.set(0);
     y.set(0);
@@ -166,7 +177,11 @@ export default function FriendsMap() {
   };
 
   const handleNodeClick = (node: Node) => {
-    if (node.id === "me") return; // Don't open drawer for self
+    if (node.id === "me") {
+        // Just recenter if clicking self
+        handleRecenter();
+        return;
+    } 
     setSelectedNode(node);
     setIsDrawerOpen(true);
   };
@@ -204,8 +219,15 @@ export default function FriendsMap() {
           dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }}
           dragElastic={0.1}
         >
-          {/* SVG Lines */}
+          {/* SVG Lines and Background Rings */}
           <svg className="absolute overflow-visible pointer-events-none" style={{ left: 0, top: 0 }}>
+            {/* Concentric Background Rings */}
+            <circle cx="0" cy="0" r={RING_1_RADIUS} fill="none" stroke="currentColor" className="text-primary/5" strokeWidth="40" />
+            <circle cx="0" cy="0" r={RING_1_RADIUS} fill="none" stroke="currentColor" className="text-primary/10" strokeWidth="1" strokeDasharray="4 4" />
+            
+            <circle cx="0" cy="0" r={RING_2_RADIUS} fill="none" stroke="currentColor" className="text-secondary/5" strokeWidth="40" />
+            <circle cx="0" cy="0" r={RING_2_RADIUS} fill="none" stroke="currentColor" className="text-secondary/10" strokeWidth="1" strokeDasharray="4 4" />
+
             {links.map((link, i) => {
               const sourceNode = nodes.find(n => n.id === link.source);
               const targetNode = nodes.find(n => n.id === link.target);
@@ -219,10 +241,10 @@ export default function FriendsMap() {
                   x2={targetNode.x}
                   y2={targetNode.y}
                   stroke="hsl(var(--primary))"
-                  strokeWidth="1.5"
-                  strokeOpacity="0.2"
+                  strokeWidth="1"
+                  strokeOpacity="0.15"
                   initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 0.2 }}
+                  animate={{ pathLength: 1, opacity: 0.15 }}
                   transition={{ duration: 1, delay: i * 0.05 }}
                 />
               );
