@@ -64,11 +64,47 @@ export default function RequestsPage() {
   const [isConnectOpen, setIsConnectOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<typeof SENT_REQUESTS[0] | null>(null);
 
+  // Confirmation Modal State
+  const [confirmationModal, setConfirmationModal] = useState<{ type: "approve" | "decline"; requestId: number } | null>(null);
+  const [requestStates, setRequestStates] = useState<Record<number, "approved" | "declined" | "pending">>({});
+
   const handleCardClick = (req: typeof SENT_REQUESTS[0]) => {
     if (req.status === "approved") {
       setSelectedContact(req);
       setIsConnectOpen(true);
     }
+  };
+
+  const handleApprove = (requestId: number) => {
+    setConfirmationModal({ type: "approve", requestId });
+  };
+
+  const handleDecline = (requestId: number) => {
+    setConfirmationModal({ type: "decline", requestId });
+  };
+
+  const handleConfirmApproval = () => {
+    if (confirmationModal?.type === "approve") {
+      setRequestStates(prev => ({
+        ...prev,
+        [confirmationModal.requestId]: "approved"
+      }));
+      setConfirmationModal(null);
+    }
+  };
+
+  const handleConfirmDecline = () => {
+    if (confirmationModal?.type === "decline") {
+      setRequestStates(prev => ({
+        ...prev,
+        [confirmationModal.requestId]: "declined"
+      }));
+      setConfirmationModal(null);
+    }
+  };
+
+  const getRequestState = (requestId: number) => {
+    return requestStates[requestId] || "pending";
   };
 
   return (
@@ -132,43 +168,94 @@ export default function RequestsPage() {
               className="space-y-4"
             >
               {RECEIVED_REQUESTS.length > 0 ? (
-                RECEIVED_REQUESTS.map((req) => (
-                  <div key={req.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-                    <div className="flex items-start gap-3 mb-3">
-                      <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
-                        <AvatarImage src={req.avatar} />
-                        <AvatarFallback>{req.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-bold text-foreground">{req.name}</h3>
-                          <span className="text-xs text-muted-foreground">{req.timestamp}</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                          Wants to meet <span className="font-semibold text-primary">{req.target}</span> via you
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {req.message && (
-                      <div className="bg-secondary/10 rounded-xl p-3 text-sm text-foreground/80 mb-4 relative">
-                         <div className="absolute -top-1 left-6 w-2 h-2 bg-secondary/10 rotate-45" />
-                         "{req.message}"
-                      </div>
-                    )}
+                RECEIVED_REQUESTS.map((req) => {
+                  const state = getRequestState(req.id);
+                  return (
+                    <motion.div
+                      key={req.id}
+                      layout
+                      className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 overflow-hidden"
+                    >
+                      {state === "pending" ? (
+                        <>
+                          <div className="flex items-start gap-3 mb-3">
+                            <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
+                              <AvatarImage src={req.avatar} />
+                              <AvatarFallback>{req.name[0]}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                <h3 className="font-bold text-foreground">{req.name}</h3>
+                                <span className="text-xs text-muted-foreground">{req.timestamp}</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-0.5">
+                                Wants to meet <span className="font-semibold text-primary">{req.target}</span> via you
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {req.message && (
+                            <div className="bg-secondary/10 rounded-xl p-3 text-sm text-foreground/80 mb-4 relative">
+                              <div className="absolute -top-1 left-6 w-2 h-2 bg-secondary/10 rotate-45" />
+                              "{req.message}"
+                            </div>
+                          )}
 
-                    <div className="flex gap-3">
-                      <Button className="flex-1 bg-gradient-to-r from-primary to-purple-500 shadow-md shadow-primary/20 rounded-xl font-bold hover:opacity-90 transition-opacity">
-                        <Check className="w-4 h-4 mr-2" />
-                        Approve
-                      </Button>
-                      <Button variant="outline" className="flex-1 border-gray-200 hover:bg-gray-50 rounded-xl font-semibold text-muted-foreground">
-                        <X className="w-4 h-4 mr-2" />
-                        Decline
-                      </Button>
-                    </div>
-                  </div>
-                ))
+                          <div className="flex gap-3">
+                            <motion.div
+                              className="flex-1"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <Button 
+                                onClick={() => handleApprove(req.id)}
+                                className="w-full bg-gradient-to-r from-primary to-purple-500 shadow-md shadow-primary/20 rounded-xl font-bold hover:opacity-90 transition-opacity"
+                              >
+                                <Check className="w-4 h-4 mr-2" />
+                                Approve
+                              </Button>
+                            </motion.div>
+                            <motion.div
+                              className="flex-1"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <Button 
+                                onClick={() => handleDecline(req.id)}
+                                variant="outline" 
+                                className="w-full border-gray-200 hover:bg-gray-50 rounded-xl font-semibold text-muted-foreground"
+                              >
+                                <X className="w-4 h-4 mr-2" />
+                                Decline
+                              </Button>
+                            </motion.div>
+                          </div>
+                        </>
+                      ) : (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="flex items-start gap-3 py-2"
+                        >
+                          <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
+                            <AvatarImage src={req.avatar} />
+                            <AvatarFallback>{req.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-start">
+                              <h3 className="font-bold text-foreground">{req.name}</h3>
+                              <span className="text-xs text-muted-foreground">{req.timestamp}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              Wants to meet <span className="font-semibold text-primary">{req.target}</span> via you
+                            </p>
+                          </div>
+                          <StatusBadge status={state} />
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  );
+                })
               ) : (
                 <EmptyState message="No received requests yet" />
               )}
@@ -273,12 +360,157 @@ export default function RequestsPage() {
           </Drawer.Content>
         </Drawer.Portal>
       </Drawer.Root>
+
+      {/* Confirmation Modal - Approve */}
+      <AnimatePresence>
+        {confirmationModal?.type === "approve" && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100]"
+              onClick={() => setConfirmationModal(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed inset-0 flex items-end justify-center z-[101] pointer-events-none"
+            >
+              <motion.div
+                className="w-full max-w-md bg-white rounded-t-3xl p-8 shadow-2xl pointer-events-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Animated checkmark */}
+                <motion.div
+                  className="flex justify-center mb-6"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.1, type: "spring", damping: 12 }}
+                >
+                  <motion.div
+                    className="w-20 h-20 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center"
+                    animate={{
+                      boxShadow: [
+                        "0 0 0 0 rgba(34, 197, 94, 0.3)",
+                        "0 0 0 20px rgba(34, 197, 94, 0)",
+                      ],
+                    }}
+                    transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 0.5 }}
+                  >
+                    <Check className="w-10 h-10 text-green-600" strokeWidth={3} />
+                  </motion.div>
+                </motion.div>
+
+                <motion.div
+                  className="text-center mb-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Introduction Approved</h3>
+                  <p className="text-muted-foreground">We'll let both sides know you approved this introduction.</p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button
+                    onClick={handleConfirmApproval}
+                    className="w-full h-14 rounded-2xl text-base font-bold shadow-lg shadow-green-500/25 bg-gradient-to-r from-green-500 to-emerald-500 hover:opacity-90 transition-opacity text-white"
+                  >
+                    Continue
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmation Modal - Decline */}
+      <AnimatePresence>
+        {confirmationModal?.type === "decline" && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100]"
+              onClick={() => setConfirmationModal(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed inset-0 flex items-end justify-center z-[101] pointer-events-none"
+            >
+              <motion.div
+                className="w-full max-w-md bg-white rounded-t-3xl p-8 shadow-2xl pointer-events-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Animated X */}
+                <motion.div
+                  className="flex justify-center mb-6"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.1, type: "spring", damping: 12 }}
+                >
+                  <motion.div
+                    className="w-20 h-20 bg-gradient-to-br from-red-100 to-rose-100 rounded-full flex items-center justify-center"
+                    animate={{
+                      boxShadow: [
+                        "0 0 0 0 rgba(239, 68, 68, 0.3)",
+                        "0 0 0 20px rgba(239, 68, 68, 0)",
+                      ],
+                    }}
+                    transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 0.5 }}
+                  >
+                    <X className="w-10 h-10 text-red-600" strokeWidth={3} />
+                  </motion.div>
+                </motion.div>
+
+                <motion.div
+                  className="text-center mb-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Request Declined</h3>
+                  <p className="text-muted-foreground">The requester will not be notified.</p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button
+                    onClick={handleConfirmDecline}
+                    className="w-full h-14 rounded-2xl text-base font-bold shadow-lg shadow-red-500/25 bg-gradient-to-r from-red-500 to-rose-500 hover:opacity-90 transition-opacity text-white"
+                  >
+                    Okay
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
-// ... existing StatusBadge
   const styles = {
     pending: "bg-blue-50 text-blue-600 border-blue-100",
     approved: "bg-green-50 text-green-600 border-green-100",
@@ -296,10 +528,14 @@ function StatusBadge({ status }: { status: string }) {
   const label = status.charAt(0).toUpperCase() + status.slice(1);
 
   return (
-    <div className={cn("px-3 py-1.5 rounded-full border flex items-center gap-1.5 text-xs font-bold", style)}>
+    <motion.div 
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className={cn("px-3 py-1.5 rounded-full border flex items-center gap-1.5 text-xs font-bold", style)}
+    >
       <Icon className="w-3.5 h-3.5" />
       {label}
-    </div>
+    </motion.div>
   );
 }
 
