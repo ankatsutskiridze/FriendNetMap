@@ -1,0 +1,49 @@
+Add an “Invite friends” flow to this app, so users can invite people who are NOT yet on the app.
+
+The flow should live inside the “Find Friends / Add Friend” screen and match the same pastel, rounded visual style.
+
+1) Entry card on Find Friends screen:
+- Under the search bar and filters, add a wide rounded card.
+- Text:
+    • Title: “Invite friends who aren’t on the app yet”
+    • Subtitle: “Send them a link or SMS so they can join.”
+- Card has a small right arrow icon.
+- Tapping the card opens an “Invite Friends” bottom sheet.
+
+2) Invite Friends bottom sheet:
+- Appears from the bottom with rounded top corners and a light shadow.
+- Title: “Invite Friends”
+- Subtitle: “Choose how you want to invite them.”
+- Two large rounded options (stacked vertically):
+
+   a) “Invite by link”
+      - Icon: link or share symbol on the left.
+      - Inside this row, when expanded, show:
+          • A non-editable text field with a sample invite link
+              (e.g. https://app.example.com/invite/ABC123)
+          • Buttons:
+              - “Copy link”
+              - “Share…” (for system share sheet)
+
+   b) “Invite by phone”
+      - Icon: phone or SMS bubble.
+      - When expanded, show:
+          • Text field with label: “Phone number”
+          • Placeholder: “e.g. +1 555 123 4567”
+          • Primary gradient button: “Send SMS invite”
+
+- Only one section (link or phone) can be expanded at a time, accordion-style.
+
+3) Confirmation states:
+- After “Copy link”: show a small toast at the bottom:
+    “Invite link copied to clipboard.”
+- After “Send SMS invite”: show a toast:
+    “Invite sent. Your friend will get a link to join.”
+
+4) Style:
+- Use the same pastel background as other screens (light purple/blue gradient).
+- All cards and buttons with fully rounded corners and soft shadows.
+- Icons should be simple line icons matching the rest of the app.
+- Text is friendly, short, and clear.
+
+Keep the entire experience feeling like a natural extension of the existing Friends Map / Connections design.

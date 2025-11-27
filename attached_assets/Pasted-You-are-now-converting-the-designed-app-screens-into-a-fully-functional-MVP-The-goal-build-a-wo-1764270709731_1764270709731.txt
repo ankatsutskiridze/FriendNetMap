@@ -1,0 +1,196 @@
+You are now converting the designed app screens into a fully functional MVP.  
+The goal: build a working social connections app with an interactive friends map, introduction requests, friend management, and invitation system.
+
+Follow these specifications exactly:
+
+========================================
+GLOBAL APP STRUCTURE
+========================================
+
+• Stack: React + Replit database (or built-in KV DB) + built-in auth (email / social login).
+• Routing:
+    /map
+    /requests
+    /connections
+    /profile
+    /settings
+    /find-friends
+    /invite
+    /user/:id
+
+• Use the UI exactly as designed in Design Mode — keep styles, colors, spacing, shadows, gradients, icons, and component hierarchy.
+
+========================================
+AUTH & USER MODEL
+========================================
+User fields:
+- id
+- fullName
+- photoURL
+- location
+- about
+- instagramHandle
+- whatsappNumber
+- phoneNumber
+- friends: array of user IDs
+- pendingRequests: array of request IDs
+- sentRequests: array of request IDs
+
+========================================
+FRIENDS MAP INTERACTION
+========================================
+• Load the user's direct friends (1st ring) and second-degree connections (2nd ring).
+• Render the bubbles exactly as designed: interactive, tappable, draggable map.
+• On bubble tap:
+    → Open the user mini-profile bottom sheet.
+
+========================================
+INTRODUCTION REQUESTS
+========================================
+Request structure:
+- id
+- fromUser
+- toUser
+- viaUser (the mutual friend)
+- message
+- status: "pending", "approved", "declined"
+- createdAt
+
+Functionality:
+• User can send a request via mini-profile.
+• If you receive a request:
+    - Show in Requests → Received.
+    - Buttons: Approve / Decline.
+• If approved:
+    - Move this new user into Connections list.
+    - Open “Connect With [Name]” sheet (WhatsApp / Instagram / Phone).
+• If declined:
+    - Show “Declined” badge in Sent tab.
+
+========================================
+CONNECTIONS SCREEN
+========================================
+Two tabs:
+1. **Connections**
+   - Show all approved intros (history + direct adds)
+2. **History**
+   - Show all past requests with timestamps & status
+
+Include a search bar at the top: “Search connections…”
+
+========================================
+FIND FRIENDS (ADD EXISTING USER)
+========================================
+This replaces the “Add Friend” manual form.
+
+Screen behavior:
+• At top: search existing users by name
+• Show list:
+    - Avatar
+    - Full name
+    - “X mutual friends”
+    - Button on right:
+         • “Add” if not a friend yet
+         • “Requested” if a request already sent
+         • “Added” after adding
+
+When “Add” pressed:
+• Add that user to my direct friends list.
+• Immediately update the Map view so this user appears in the first ring.
+
+========================================
+INVITE FRIENDS (LINK + PHONE)
+========================================
+Add a card on the Find Friends screen:
+“Invite friends who aren’t on the app yet”
+
+On tap → open Invite bottom sheet:
+
+Invite Options:
+
+1) **Invite by link**
+    - Generate unique invite link: /invite/<code>
+    - Show:
+        • read-only link box
+        • Copy Link
+        • Share…
+
+2) **Invite by phone**
+    - Input: phone number
+    - On submit: send invite SMS via built-in Replit connector (Twilio or compatible)
+    - Show confirmation toast
+
+Invite link behavior:
+• If someone opens your invite link → redirect to signup with auto-referral = your user ID.
+
+========================================
+PROFILE SCREEN
+========================================
+Editable fields:
+- Photo
+- Full name
+- Location
+- About
+- Instagram handle
+- WhatsApp number
+- Phone
+
+All changes saved live to the DB.
+
+========================================
+REQUESTS SCREEN
+========================================
+Two tabs:
+1. Received
+    - Card with request info
+    - Approve → change status to approved + show Connect sheet
+    - Decline → change status to declined
+2. Sent
+    - Show status badges: Pending / Approved / Declined
+    - Approved items have a “Tap to connect” link that opens the contact sheet.
+
+========================================
+CONNECT SHEET (after approval)
+========================================
+Show:
+• WhatsApp → deep link to chat
+• Instagram → open profile handle
+• Phone → trigger tel:+number
+
+Card style must match design.
+
+========================================
+SETTINGS
+========================================
+- Edit profile
+- Privacy policy
+- Terms
+- Logout
+
+========================================
+TECHNICAL REQUIREMENTS
+========================================
+• Use functional components + hooks
+• Centralize DB operations in a single service file
+• Add controlled state for modals & bottom sheets
+• Use transition animations for opening/closing sheets
+• Build step-by-step: start with data models → flows → screens → logic → polishing.
+
+========================================
+YOUR TASK
+========================================
+Build the entire MVP exactly as specified using React in Replit’s App Mode.
+
+Generate all files needed:
+- components/
+- screens/
+- services/
+- db/
+- hooks/
+- context/
+- router/
+- styles/
+
+Respect the design pixel-perfect.
+
+Start coding now.

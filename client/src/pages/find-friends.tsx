@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Search, UserPlus, UserCheck, Filter } from "lucide-react";
+import { ChevronLeft, Search, UserPlus, UserCheck, Filter, ChevronRight, Link2, Phone, Copy, Share2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
 import { Drawer } from "vaul";
+import { useToast } from "@/hooks/use-toast";
 
 // Assets
 import imgWoman from "@assets/generated_images/friendly_young_woman_avatar.png";
@@ -58,6 +59,12 @@ export default function FindFriendsPage() {
   const [users, setUsers] = useState(SUGGESTED_USERS);
   const [selectedUser, setSelectedUser] = useState<typeof SUGGESTED_USERS[0] | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isInviteDrawerOpen, setIsInviteDrawerOpen] = useState(false);
+  const [expandedInvite, setExpandedInvite] = useState<"link" | "phone" | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const { toast } = useToast();
+  
+  const inviteLink = "https://app.friendsmap.com/invite/ABC123";
 
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -96,6 +103,45 @@ export default function FindFriendsPage() {
   const handleUserClick = (user: typeof SUGGESTED_USERS[0]) => {
     setSelectedUser(user);
     setIsDrawerOpen(true);
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    toast({
+      description: "Invite link copied to clipboard.",
+    });
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Join Friends Map",
+          text: "Join me on Friends Map to connect and network!",
+          url: inviteLink,
+        });
+      } catch (err) {
+        console.log("Share canceled");
+      }
+    } else {
+      handleCopyLink();
+    }
+  };
+
+  const handleSendSMS = () => {
+    if (!phoneNumber) {
+      toast({
+        description: "Please enter a phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    toast({
+      description: "Invite sent. Your friend will get a link to join.",
+    });
+    setPhoneNumber("");
+    setIsInviteDrawerOpen(false);
   };
 
   return (
@@ -141,6 +187,22 @@ export default function FindFriendsPage() {
             </button>
           ))}
         </div>
+
+        {/* Invite Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={() => setIsInviteDrawerOpen(true)}
+          className="bg-gradient-to-r from-primary/10 via-purple-50 to-blue-50 rounded-2xl p-5 mb-6 cursor-pointer hover:shadow-lg transition-all border border-primary/20"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="font-bold text-foreground mb-1">Invite friends who aren't on the app yet</h3>
+              <p className="text-sm text-muted-foreground">Send them a link or SMS so they can join.</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-primary shrink-0 ml-3" />
+          </div>
+        </motion.div>
 
         {/* Users List */}
         <div className="space-y-3">
@@ -239,6 +301,115 @@ export default function FindFriendsPage() {
                   </Button>
                 </div>
               )}
+            </div>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
+
+      {/* Invite Friends Drawer */}
+      <Drawer.Root open={isInviteDrawerOpen} onOpenChange={setIsInviteDrawerOpen} shouldScaleBackground>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-md z-50" />
+          <Drawer.Content className="bg-white flex flex-col rounded-t-[32px] mt-24 fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] outline-none shadow-2xl">
+            <div className="p-6 bg-white rounded-t-[32px] flex-1 overflow-y-auto">
+              <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-200 mb-6" />
+              
+              <div className="max-w-md mx-auto pb-8">
+                <h2 className="text-2xl font-bold text-foreground mb-2">Invite Friends</h2>
+                <p className="text-muted-foreground mb-8">Choose how you want to invite them.</p>
+
+                <div className="space-y-3">
+                  {/* Invite by Link */}
+                  <div className="bg-white border-2 border-gray-100 rounded-2xl overflow-hidden">
+                    <button
+                      onClick={() => setExpandedInvite(expandedInvite === "link" ? null : "link")}
+                      className="w-full flex items-center gap-4 p-4 hover:bg-gray-50/50 transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Link2 className="w-6 h-6 text-primary" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <h3 className="font-bold text-foreground">Invite by link</h3>
+                        <p className="text-sm text-muted-foreground">Share a link to join</p>
+                      </div>
+                      <ChevronRight className={`w-5 h-5 text-muted-foreground transition-transform ${expandedInvite === "link" ? "rotate-90" : ""}`} />
+                    </button>
+                    
+                    {expandedInvite === "link" && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="border-t border-gray-100 p-4 space-y-3"
+                      >
+                        <div className="bg-gray-50 rounded-xl p-3 text-sm text-foreground font-mono break-all">
+                          {inviteLink}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleCopyLink}
+                            className="flex-1 rounded-xl font-bold"
+                            variant="outline"
+                          >
+                            <Copy className="w-4 h-4 mr-2" />
+                            Copy link
+                          </Button>
+                          <Button
+                            onClick={handleShare}
+                            className="flex-1 rounded-xl font-bold bg-gradient-to-r from-primary to-purple-500 text-white"
+                          >
+                            <Share2 className="w-4 h-4 mr-2" />
+                            Share…
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  {/* Invite by Phone */}
+                  <div className="bg-white border-2 border-gray-100 rounded-2xl overflow-hidden">
+                    <button
+                      onClick={() => setExpandedInvite(expandedInvite === "phone" ? null : "phone")}
+                      className="w-full flex items-center gap-4 p-4 hover:bg-gray-50/50 transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center shrink-0">
+                        <Phone className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <h3 className="font-bold text-foreground">Invite by phone</h3>
+                        <p className="text-sm text-muted-foreground">Send an SMS invite</p>
+                      </div>
+                      <ChevronRight className={`w-5 h-5 text-muted-foreground transition-transform ${expandedInvite === "phone" ? "rotate-90" : ""}`} />
+                    </button>
+                    
+                    {expandedInvite === "phone" && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="border-t border-gray-100 p-4 space-y-3"
+                      >
+                        <div>
+                          <label className="block text-sm font-bold text-foreground mb-2">Phone number</label>
+                          <Input
+                            type="tel"
+                            placeholder="e.g. +1 555 123 4567"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            className="rounded-xl"
+                          />
+                        </div>
+                        <Button
+                          onClick={handleSendSMS}
+                          className="w-full rounded-xl font-bold bg-gradient-to-r from-primary to-purple-500 text-white h-12"
+                        >
+                          Send SMS invite
+                        </Button>
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </Drawer.Content>
         </Drawer.Portal>
