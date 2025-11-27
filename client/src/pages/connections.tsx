@@ -1,117 +1,66 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Search, Filter, Clock, UserCheck, UserX, Send, UserPlus } from "lucide-react";
+import { ChevronLeft, Search, Clock, UserCheck, UserX, UserPlus, Loader2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
+import { useFriends, useActivity, useUser, useCurrentUser } from "@/lib/api";
 
-// Reuse assets
 import imgWoman from "@assets/generated_images/friendly_young_woman_avatar.png";
 import imgMan from "@assets/generated_images/friendly_young_man_avatar.png";
 import imgPerson from "@assets/generated_images/friendly_person_avatar.png";
 import emptyNetworkImg from "@assets/generated_images/empty_network_illustration.png";
 import emptyHistoryImg from "@assets/generated_images/empty_history_illustration.png";
 
-// Mock data for connections (approved introductions)
-const CONNECTIONS = [
-  {
-    id: 1,
-    name: "Riley Davis",
-    avatar: imgMan,
-    introducedVia: "Jordan Lee",
-    timestamp: "2d ago",
-    status: "approved"
-  },
-  {
-    id: 2,
-    name: "Morgan Green",
-    avatar: imgWoman,
-    introducedVia: "Direct introduction",
-    timestamp: "5d ago",
-    status: "approved"
-  },
-  {
-    id: 3,
-    name: "Taylor Chen",
-    avatar: imgPerson,
-    introducedVia: "Casey West",
-    timestamp: "1w ago",
-    status: "approved"
-  }
-];
+const GENERATED_IMAGES = [imgWoman, imgMan, imgPerson];
 
-// Mock data for activity history
-const ACTIVITY_HISTORY = [
-  {
-    id: 101,
-    name: "Riley Davis",
-    avatar: imgMan,
-    status: "approved",
-    type: "received",
-    eventType: "approved_request",
-    context: "via Jordan Lee",
-    timestamp: "2d ago"
-  },
-  {
-    id: 102,
-    name: "Morgan Green",
-    avatar: imgWoman,
-    status: "pending",
-    type: "sent",
-    eventType: "pending_request",
-    context: "via Casey West",
-    timestamp: "3d ago"
-  },
-  {
-    id: 103,
-    name: "Quinn Baker",
-    avatar: imgPerson,
-    status: "declined",
-    type: "received",
-    eventType: "declined_request",
-    context: "request declined",
-    timestamp: "4d ago"
-  },
-  {
-    id: 104,
-    name: "Taylor Chen",
-    avatar: imgPerson,
-    status: "approved",
-    type: "sent",
-    eventType: "approved_request",
-    context: "via Casey West",
-    timestamp: "1w ago"
-  },
-  {
-    id: 105,
-    name: "Jordan Lee",
-    avatar: imgMan,
-    status: "pending",
-    type: "received",
-    eventType: "pending_request",
-    context: "introduction pending",
-    timestamp: "1w ago"
-  }
-];
+function formatTimeAgo(date: Date | string): string {
+  const now = new Date();
+  const then = new Date(date);
+  const diffMs = now.getTime() - then.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return `${Math.floor(diffDays / 7)}w ago`;
+}
 
 export default function ConnectionsPage() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"connections" | "history">("connections");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredConnections = CONNECTIONS.filter(conn =>
-    conn.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const { data: currentUser } = useCurrentUser();
+  const { data: friends = [], isLoading: friendsLoading } = useFriends();
+  const { data: activity = [], isLoading: activityLoading } = useActivity();
+
+  const isLoading = friendsLoading || activityLoading;
+
+  const filteredConnections = friends.filter(friend =>
+    friend.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    friend.username?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredHistory = ACTIVITY_HISTORY.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredActivity = activity.filter(item => {
+    return true;
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-white font-sans text-foreground pb-24">
-      {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-white/20 shadow-sm px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button
@@ -119,10 +68,11 @@ export default function ConnectionsPage() {
             size="icon"
             className="mr-1 -ml-2 rounded-full hover:bg-secondary/20"
             onClick={() => setLocation("/")}
+            data-testid="button-back"
           >
             <ChevronLeft className="w-6 h-6 text-foreground" />
           </Button>
-          <h1 className="text-xl font-bold text-foreground">Connections</h1>
+          <h1 className="text-xl font-bold text-foreground" data-testid="text-page-title">Connections</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button 
@@ -130,33 +80,27 @@ export default function ConnectionsPage() {
             size="icon" 
             className="rounded-full hover:bg-secondary/20 text-primary"
             onClick={() => setLocation("/find-friends")}
+            data-testid="button-find-friends"
           >
             <UserPlus className="w-6 h-6" />
-          </Button>
-          <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary/20">
-            <Search className="w-5 h-5 text-foreground" />
-          </Button>
-          <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary/20">
-            <Filter className="w-5 h-5 text-foreground" />
           </Button>
         </div>
       </header>
 
       <div className="max-w-md mx-auto p-4">
-        {/* Search Bar */}
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search connections…"
+              placeholder="Search connections..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 bg-white/60 border-white rounded-xl placeholder:text-muted-foreground/50"
+              data-testid="input-search"
             />
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex items-center border-b border-gray-100 mb-6 relative">
           <button
             onClick={() => setActiveTab("connections")}
@@ -164,8 +108,9 @@ export default function ConnectionsPage() {
               "flex-1 py-3 text-sm font-bold transition-colors relative",
               activeTab === "connections" ? "text-primary" : "text-muted-foreground"
             )}
+            data-testid="tab-connections"
           >
-            Connections
+            Connections ({friends.length})
             {activeTab === "connections" && (
               <motion.div
                 layoutId="activeTab"
@@ -179,6 +124,7 @@ export default function ConnectionsPage() {
               "flex-1 py-3 text-sm font-bold transition-colors relative",
               activeTab === "history" ? "text-primary" : "text-muted-foreground"
             )}
+            data-testid="tab-history"
           >
             History
             {activeTab === "history" && (
@@ -190,7 +136,6 @@ export default function ConnectionsPage() {
           </button>
         </div>
 
-        {/* Content */}
         <AnimatePresence mode="wait">
           {activeTab === "connections" ? (
             <motion.div
@@ -201,32 +146,40 @@ export default function ConnectionsPage() {
               className="space-y-3"
             >
               {filteredConnections.length > 0 ? (
-                filteredConnections.map((conn) => (
+                filteredConnections.map((friend, index) => (
                   <motion.button
-                    key={conn.id}
+                    key={friend.id}
                     className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex items-center justify-between text-left hover:shadow-md hover:border-primary/20 transition-all active:scale-[0.98]"
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
+                    onClick={() => setLocation(`/profile/${friend.id}`)}
+                    data-testid={`connection-${friend.id}`}
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
-                        <AvatarImage src={conn.avatar} />
-                        <AvatarFallback>{conn.name[0]}</AvatarFallback>
+                        <AvatarImage src={friend.photoURL || GENERATED_IMAGES[index % 3]} />
+                        <AvatarFallback>{friend.fullName?.[0] || "U"}</AvatarFallback>
                       </Avatar>
                       <div className="text-left">
-                        <h3 className="font-bold text-foreground">{conn.name}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          Introduced via <span className="font-semibold">{conn.introducedVia}</span>
-                        </p>
+                        <h3 className="font-bold text-foreground">{friend.fullName || friend.username}</h3>
+                        {friend.location && (
+                          <p className="text-xs text-muted-foreground">{friend.location}</p>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">{conn.timestamp}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {friend.friends?.length || 0} friends
+                      </p>
                     </div>
                   </motion.button>
                 ))
               ) : (
-                <EmptyState title="No connections yet" subtitle="Your approved introductions will show up here." image={emptyNetworkImg} />
+                <EmptyState 
+                  title="No connections yet" 
+                  subtitle="Your friends will show up here once you connect." 
+                  image={emptyNetworkImg} 
+                />
               )}
             </motion.div>
           ) : (
@@ -237,44 +190,21 @@ export default function ConnectionsPage() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-3"
             >
-              {filteredHistory.length > 0 ? (
-                filteredHistory.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 hover:shadow-md hover:border-primary/20 transition-all"
-                    whileHover={{ scale: 1.01 }}
-                  >
-                    <div className="flex items-start gap-3 justify-between">
-                      <div className="flex items-start gap-3 flex-1">
-                        <Avatar className="w-12 h-12 border-2 border-white shadow-sm shrink-0 mt-0.5">
-                          <AvatarImage src={item.avatar} />
-                          <AvatarFallback>{item.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-foreground text-sm">{item.name}</h3>
-                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                            {item.eventType === "approved_request" && (
-                              <>Your request to meet <span className="font-semibold text-primary">{item.name}</span> {item.context ? `${item.context}` : ""} was approved.</>
-                            )}
-                            {item.eventType === "pending_request" && (
-                              <>You requested an intro to <span className="font-semibold text-primary">{item.name}</span> {item.context ? `${item.context}` : ""}.</>
-                            )}
-                            {item.eventType === "declined_request" && (
-                              <>Your introduction request to <span className="font-semibold text-primary">{item.name}</span> was declined.</>
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-2">{item.timestamp}</p>
-                        </div>
-                      </div>
-
-                      <div className="shrink-0">
-                        <ActivityBadge status={item.status} type={item.type} />
-                      </div>
-                    </div>
-                  </motion.div>
+              {filteredActivity.length > 0 ? (
+                filteredActivity.map((item, index) => (
+                  <ActivityItem 
+                    key={item.id} 
+                    item={item} 
+                    index={index}
+                    currentUserId={currentUser?.id || ""}
+                  />
                 ))
               ) : (
-                <EmptyState title="No history yet" subtitle="As you send and receive introductions, you'll see them here." image={emptyHistoryImg} />
+                <EmptyState 
+                  title="No history yet" 
+                  subtitle="As you send and receive introductions, you'll see them here." 
+                  image={emptyHistoryImg} 
+                />
               )}
             </motion.div>
           )}
@@ -284,7 +214,58 @@ export default function ConnectionsPage() {
   );
 }
 
-function ActivityBadge({ status, type }: { status: string; type: string }) {
+function ActivityItem({ item, index, currentUserId }: { item: any; index: number; currentUserId: string }) {
+  const isFromMe = item.fromUserId === currentUserId;
+  const isToMe = item.toUserId === currentUserId;
+  const isViaMe = item.viaUserId === currentUserId;
+  
+  const { data: fromUser } = useUser(item.fromUserId);
+  const { data: toUser } = useUser(item.toUserId);
+  const { data: viaUser } = useUser(item.viaUserId);
+  
+  const displayUser = isFromMe ? toUser : fromUser;
+  const displayName = displayUser?.fullName || displayUser?.username || "Someone";
+  const viaName = viaUser?.fullName || viaUser?.username || "someone";
+  
+  let description = "";
+  if (isFromMe) {
+    description = `You requested an intro to ${toUser?.fullName || toUser?.username} via ${viaName}`;
+  } else if (isViaMe) {
+    description = `${fromUser?.fullName || fromUser?.username} wants to meet ${toUser?.fullName || toUser?.username} via you`;
+  } else if (isToMe) {
+    description = `${fromUser?.fullName || fromUser?.username} was introduced to you via ${viaName}`;
+  }
+  
+  return (
+    <motion.div
+      className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 hover:shadow-md hover:border-primary/20 transition-all"
+      whileHover={{ scale: 1.01 }}
+      data-testid={`activity-${item.id}`}
+    >
+      <div className="flex items-start gap-3 justify-between">
+        <div className="flex items-start gap-3 flex-1">
+          <Avatar className="w-12 h-12 border-2 border-white shadow-sm shrink-0 mt-0.5">
+            <AvatarImage src={displayUser?.photoURL || GENERATED_IMAGES[index % 3]} />
+            <AvatarFallback>{displayName[0]}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-foreground text-sm">{displayName}</h3>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              {description}
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">{formatTimeAgo(item.createdAt)}</p>
+          </div>
+        </div>
+
+        <div className="shrink-0">
+          <ActivityBadge status={item.status} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function ActivityBadge({ status }: { status: string }) {
   const statusStyles = {
     approved: {
       bg: "bg-green-50",
@@ -306,7 +287,7 @@ function ActivityBadge({ status, type }: { status: string; type: string }) {
     }
   };
 
-  const style = statusStyles[status as keyof typeof statusStyles];
+  const style = statusStyles[status as keyof typeof statusStyles] || statusStyles.pending;
   const Icon = style.icon;
   const label = status.charAt(0).toUpperCase() + status.slice(1);
 

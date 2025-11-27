@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { insertUserSchema, insertIntroRequestSchema, updateUserSchema } from "@shared/schema";
+import { insertUserSchema, insertIntroRequestSchema, updateUserSchema, updateSettingsSchema } from "@shared/schema";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 
@@ -308,6 +308,109 @@ export async function registerRoutes(
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Search users
+  app.get("/api/users/search", requireAuth, async (req: any, res) => {
+    try {
+      const query = (req.query.q as string) || "";
+      const users = await storage.searchUsers(query, req.user.id);
+      const usersWithoutPasswords = users.map(({ password, ...user }) => user);
+      res.json(usersWithoutPasswords);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Delete user account
+  app.delete("/api/users/:id", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.id !== req.params.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      await storage.deleteUser(req.params.id);
+      req.logout(() => {
+        res.json({ message: "Account deleted successfully" });
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Friends of friends
+  app.get("/api/friends/fof", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !user.friends || user.friends.length === 0) {
+        return res.json([]);
+      }
+      
+      // Get all friends
+      const friends = await storage.getUsersByIds(user.friends);
+      
+      // Collect all friends-of-friends (excluding self and direct friends)
+      const fofIds = new Set<string>();
+      for (const friend of friends) {
+        if (friend.friends) {
+          for (const fofId of friend.friends) {
+            if (fofId !== req.user.id && !user.friends.includes(fofId)) {
+              fofIds.add(fofId);
+            }
+          }
+        }
+      }
+      
+      if (fofIds.size === 0) {
+        return res.json([]);
+      }
+      
+      const fofUsers = await storage.getUsersByIds(Array.from(fofIds));
+      const fofWithoutPasswords = fofUsers.map(({ password, ...u }) => ({
+        ...u,
+        mutualFriends: friends.filter(f => f.friends?.includes(u.id)).map(f => ({ id: f.id, fullName: f.fullName, photoURL: f.photoURL }))
+      }));
+      
+      res.json(fofWithoutPasswords);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Activity history (all intro requests involving user)
+  app.get("/api/activity", requireAuth, async (req: any, res) => {
+    try {
+      const requests = await storage.getAllIntroRequestsForUser(req.user.id);
+      res.json(requests);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Settings routes
+  app.get("/api/settings", requireAuth, async (req: any, res) => {
+    try {
+      let settings = await storage.getSettings(req.user.id);
+      if (!settings) {
+        settings = await storage.createSettings(req.user.id);
+      }
+      res.json(settings);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/settings", requireAuth, async (req: any, res) => {
+    try {
+      const parsed = updateSettingsSchema.parse(req.body);
+      let settings = await storage.getSettings(req.user.id);
+      if (!settings) {
+        settings = await storage.createSettings(req.user.id);
+      }
+      const updated = await storage.updateSettings(req.user.id, parsed);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
     }
   });
 

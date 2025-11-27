@@ -1,157 +1,122 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Check, X, Clock, UserCheck, UserX, Phone, MessageCircle, Instagram, ChevronRight } from "lucide-react";
+import { ChevronLeft, Check, X, Clock, UserCheck, UserX, Phone, MessageCircle, Instagram, ChevronRight, Loader2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { Drawer } from "vaul";
+import { useIntroRequestsReceived, useIntroRequestsSent, useUser, useApproveIntroRequest, useDeclineIntroRequest } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
 
-// Reuse assets
 import imgWoman from "@assets/generated_images/friendly_young_woman_avatar.png";
 import imgMan from "@assets/generated_images/friendly_young_man_avatar.png";
 import imgPerson from "@assets/generated_images/friendly_person_avatar.png";
 import emptyInboxImg from "@assets/generated_images/empty_inbox_illustration.png";
 
-// Mock Data
-const RECEIVED_REQUESTS = [
-  {
-    id: 1,
-    name: "Jordan Lee",
-    avatar: imgMan,
-    target: "Alex Smith",
-    message: "Hey! I noticed we both love hiking. Would love an intro to Alex.",
-    timestamp: "2h ago"
-  },
-  {
-    id: 2,
-    name: "Casey West",
-    avatar: imgPerson,
-    target: "Sam Taylor",
-    message: "Working on a similar startup idea, hoping to connect.",
-    timestamp: "5h ago"
-  }
-];
+const GENERATED_IMAGES = [imgWoman, imgMan, imgPerson];
 
-const SENT_REQUESTS = [
-  {
-    id: 3,
-    name: "Morgan Green",
-    avatar: imgWoman,
-    status: "pending", // pending, approved, declined
-    timestamp: "1d ago"
-  },
-  {
-    id: 4,
-    name: "Riley Davis",
-    avatar: imgMan,
-    status: "approved",
-    timestamp: "2d ago"
-  },
-  {
-    id: 5,
-    name: "Quinn Baker",
-    avatar: imgPerson,
-    status: "declined",
-    timestamp: "3d ago"
-  }
-];
+function formatTimeAgo(date: Date | string): string {
+  const now = new Date();
+  const then = new Date(date);
+  const diffMs = now.getTime() - then.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return `${Math.floor(diffDays / 7)}w ago`;
+}
+
+function UserDisplay({ userId, fallbackImage }: { userId: string; fallbackImage: string }) {
+  const { data: user } = useUser(userId);
+  return (
+    <span className="font-semibold text-primary">
+      {user?.fullName || user?.username || "Someone"}
+    </span>
+  );
+}
+
+function UserAvatar({ userId, index }: { userId: string; index: number }) {
+  const { data: user } = useUser(userId);
+  return (
+    <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
+      <AvatarImage src={user?.photoURL || GENERATED_IMAGES[index % 3]} />
+      <AvatarFallback>{user?.fullName?.[0] || "U"}</AvatarFallback>
+    </Avatar>
+  );
+}
 
 export default function RequestsPage() {
   const [activeTab, setActiveTab] = useState<"received" | "sent">("received");
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   
-  // Connect Drawer State
   const [isConnectOpen, setIsConnectOpen] = useState(false);
-  const [selectedContact, setSelectedContact] = useState<typeof SENT_REQUESTS[0] | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // Confirmation Modal State
-  const [confirmationModal, setConfirmationModal] = useState<{ type: "approve" | "decline"; requestId: number } | null>(null);
-  const [requestStates, setRequestStates] = useState<Record<number, "approved" | "declined" | "pending">>({});
-  const [showConfirmationOnly, setShowConfirmationOnly] = useState(true);
-  const [removingRequests, setRemovingRequests] = useState<Set<number>>(new Set());
+  const { data: receivedRequests = [], isLoading: receivedLoading } = useIntroRequestsReceived();
+  const { data: sentRequests = [], isLoading: sentLoading } = useIntroRequestsSent();
+  const approveRequest = useApproveIntroRequest();
+  const declineRequest = useDeclineIntroRequest();
 
-  // Auto-dismiss confirmations after 1.2 seconds
-  useEffect(() => {
-    if (confirmationModal?.type === "approve" && showConfirmationOnly) {
-      const timer = setTimeout(() => {
-        handleConfirmApproval();
-      }, 1200);
-      return () => clearTimeout(timer);
-    } else if (confirmationModal?.type === "decline") {
-      const timer = setTimeout(() => {
-        handleConfirmDecline();
-      }, 1200);
-      return () => clearTimeout(timer);
+  const isLoading = receivedLoading || sentLoading;
+
+  const handleApprove = async (requestId: string) => {
+    setProcessingId(requestId);
+    try {
+      await approveRequest.mutateAsync(requestId);
+    } catch (err) {
+      console.error("Failed to approve:", err);
     }
-  }, [confirmationModal, showConfirmationOnly]);
+    setProcessingId(null);
+  };
 
-  const handleCardClick = (req: typeof SENT_REQUESTS[0] | typeof RECEIVED_REQUESTS[0], isReceived?: boolean) => {
-    if (!isReceived && (req as typeof SENT_REQUESTS[0]).status === "approved") {
-      setSelectedContact(req as typeof SENT_REQUESTS[0]);
+  const handleDecline = async (requestId: string) => {
+    setProcessingId(requestId);
+    try {
+      await declineRequest.mutateAsync(requestId);
+    } catch (err) {
+      console.error("Failed to decline:", err);
+    }
+    setProcessingId(null);
+  };
+
+  const handleCardClick = (requestId: string, userId: string, status: string) => {
+    if (status === "approved") {
+      setSelectedContactId(userId);
       setIsConnectOpen(true);
-    } else if (isReceived && getRequestState((req as typeof RECEIVED_REQUESTS[0]).id) === "approved") {
-      setSelectedContact({ id: (req as typeof RECEIVED_REQUESTS[0]).id, name: (req as typeof RECEIVED_REQUESTS[0]).name, avatar: (req as typeof RECEIVED_REQUESTS[0]).avatar, status: "approved", timestamp: (req as typeof RECEIVED_REQUESTS[0]).timestamp } as any);
-      setIsConnectOpen(true);
     }
   };
 
-  const handleApprove = (requestId: number) => {
-    setConfirmationModal({ type: "approve", requestId });
-  };
-
-  const handleDecline = (requestId: number) => {
-    setConfirmationModal({ type: "decline", requestId });
-  };
-
-  const handleConfirmApproval = () => {
-    if (confirmationModal?.type === "approve") {
-      setRequestStates(prev => ({
-        ...prev,
-        [confirmationModal.requestId]: "approved"
-      }));
-      setConfirmationModal(null);
-      setShowConfirmationOnly(true);
-    }
-  };
-
-  const handleConfirmDecline = () => {
-    if (confirmationModal?.type === "decline") {
-      // Mark the request for removal
-      setRemovingRequests(prev => new Set([...Array.from(prev), confirmationModal.requestId]));
-      setConfirmationModal(null);
-      
-      // After animation completes, remove from state
-      setTimeout(() => {
-        setRequestStates(prev => ({
-          ...prev,
-          [confirmationModal.requestId]: "declined"
-        }));
-      }, 300);
-    }
-  };
-
-  const getRequestState = (requestId: number) => {
-    return requestStates[requestId] || "pending";
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-white font-sans text-foreground pb-24">
-      {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-white/20 shadow-sm px-4 py-3 flex items-center">
         <Button
           variant="ghost"
           size="icon"
           className="mr-2 -ml-2 rounded-full hover:bg-secondary/20"
           onClick={() => setLocation("/")}
+          data-testid="button-back"
         >
           <ChevronLeft className="w-6 h-6 text-foreground" />
         </Button>
-        <h1 className="text-xl font-bold text-foreground">Requests</h1>
+        <h1 className="text-xl font-bold text-foreground" data-testid="text-page-title">Requests</h1>
       </header>
 
       <div className="max-w-md mx-auto p-4">
-        {/* Tabs */}
         <div className="flex items-center border-b border-gray-100 mb-6 relative">
           <button
             onClick={() => setActiveTab("received")}
@@ -159,8 +124,9 @@ export default function RequestsPage() {
               "flex-1 py-3 text-sm font-bold transition-colors relative",
               activeTab === "received" ? "text-primary" : "text-muted-foreground"
             )}
+            data-testid="tab-received"
           >
-            Received
+            Received ({receivedRequests.filter(r => r.status === "pending").length})
             {activeTab === "received" && (
               <motion.div
                 layoutId="activeTab"
@@ -174,8 +140,9 @@ export default function RequestsPage() {
               "flex-1 py-3 text-sm font-bold transition-colors relative",
               activeTab === "sent" ? "text-primary" : "text-muted-foreground"
             )}
+            data-testid="tab-sent"
           >
-            Sent
+            Sent ({sentRequests.length})
             {activeTab === "sent" && (
               <motion.div
                 layoutId="activeTab"
@@ -185,7 +152,6 @@ export default function RequestsPage() {
           </button>
         </div>
 
-        {/* Content */}
         <AnimatePresence mode="wait">
           {activeTab === "received" ? (
             <motion.div
@@ -195,114 +161,80 @@ export default function RequestsPage() {
               exit={{ opacity: 0, x: 20 }}
               className="space-y-4"
             >
-              {RECEIVED_REQUESTS.filter(req => getRequestState(req.id) !== "declined" || removingRequests.has(req.id)).length > 0 ? (
-                RECEIVED_REQUESTS.map((req) => {
-                  const state = getRequestState(req.id);
-                  const isRemoving = removingRequests.has(req.id);
-                  
-                  // Filter out fully declined cards
-                  if (state === "declined" && !isRemoving) {
-                    return null;
-                  }
-                  
-                  return (
-                    <motion.div
-                      key={req.id}
-                      layout
-                      initial={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.92, y: 15 }}
-                      transition={{ duration: 0.3 }}
-                      className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 overflow-hidden"
-                      animate={isRemoving ? { opacity: 0, scale: 0.92, y: 15 } : { opacity: 1, scale: 1, y: 0 }}
-                    >
-                      {state === "pending" ? (
-                        <>
-                          <div className="flex items-start gap-3 mb-3">
-                            <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
-                              <AvatarImage src={req.avatar} />
-                              <AvatarFallback>{req.name[0]}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start">
-                                <h3 className="font-bold text-foreground">{req.name}</h3>
-                                <span className="text-xs text-muted-foreground">{req.timestamp}</span>
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-0.5">
-                                Wants to meet <span className="font-semibold text-primary">{req.target}</span> via you
-                              </p>
+              {receivedRequests.length > 0 ? (
+                receivedRequests.map((req, index) => (
+                  <motion.div
+                    key={req.id}
+                    layout
+                    initial={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.92, y: 15 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 overflow-hidden"
+                    data-testid={`request-received-${req.id}`}
+                  >
+                    {req.status === "pending" ? (
+                      <>
+                        <div className="flex items-start gap-3 mb-3">
+                          <UserAvatar userId={req.fromUserId} index={index} />
+                          <div className="flex-1">
+                            <div className="flex justify-between items-start">
+                              <UserDisplay userId={req.fromUserId} fallbackImage={GENERATED_IMAGES[index % 3]} />
+                              <span className="text-xs text-muted-foreground">{formatTimeAgo(req.createdAt)}</span>
                             </div>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              Wants to meet <UserDisplay userId={req.toUserId} fallbackImage="" /> via you
+                            </p>
                           </div>
-                          
-                          {req.message && (
-                            <div className="bg-secondary/10 rounded-xl p-3 text-sm text-foreground/80 mb-4 relative">
-                              <div className="absolute -top-1 left-6 w-2 h-2 bg-secondary/10 rotate-45" />
-                              "{req.message}"
-                            </div>
-                          )}
+                        </div>
+                        
+                        {req.message && (
+                          <div className="bg-secondary/10 rounded-xl p-3 text-sm text-foreground/80 mb-4 relative">
+                            <div className="absolute -top-1 left-6 w-2 h-2 bg-secondary/10 rotate-45" />
+                            "{req.message}"
+                          </div>
+                        )}
 
-                          <div className="flex gap-3">
-                            <motion.div
-                              className="flex-1"
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
+                        <div className="flex gap-3">
+                          <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Button 
+                              onClick={() => handleApprove(req.id)}
+                              disabled={processingId === req.id}
+                              className="w-full bg-gradient-to-r from-primary to-purple-500 shadow-md shadow-primary/20 rounded-xl font-bold hover:opacity-90 transition-opacity"
+                              data-testid={`button-approve-${req.id}`}
                             >
-                              <Button 
-                                onClick={() => handleApprove(req.id)}
-                                className="w-full bg-gradient-to-r from-primary to-purple-500 shadow-md shadow-primary/20 rounded-xl font-bold hover:opacity-90 transition-opacity"
-                              >
-                                <Check className="w-4 h-4 mr-2" />
-                                Approve
-                              </Button>
-                            </motion.div>
-                            <motion.div
-                              className="flex-1"
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
+                              {processingId === req.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <Check className="w-4 h-4 mr-2" />
+                                  Approve
+                                </>
+                              )}
+                            </Button>
+                          </motion.div>
+                          <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Button 
+                              onClick={() => handleDecline(req.id)}
+                              disabled={processingId === req.id}
+                              variant="outline" 
+                              className="w-full border-gray-200 hover:bg-gray-50 rounded-xl font-semibold text-muted-foreground"
+                              data-testid={`button-decline-${req.id}`}
                             >
-                              <Button 
-                                onClick={() => handleDecline(req.id)}
-                                variant="outline" 
-                                className="w-full border-gray-200 hover:bg-gray-50 rounded-xl font-semibold text-muted-foreground"
-                              >
-                                <X className="w-4 h-4 mr-2" />
-                                Decline
-                              </Button>
-                            </motion.div>
-                          </div>
-                        </>
-                      ) : (
-                        <motion.button
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className={cn(
-                            "w-full flex items-center justify-between p-4 text-left bg-white rounded-2xl border border-gray-50 shadow-sm transition-all",
-                            state === "approved" && "cursor-pointer hover:shadow-md hover:border-primary/20 active:scale-[0.98]"
-                          )}
-                          onClick={() => handleCardClick(req, true)}
-                          disabled={state !== "approved"}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
-                              <AvatarImage src={req.avatar} />
-                              <AvatarFallback>{req.name[0]}</AvatarFallback>
-                            </Avatar>
-                            <div className="text-left">
-                              <h3 className="font-bold text-foreground text-sm">{req.name}</h3>
-                              <p className="text-xs text-muted-foreground">{req.timestamp}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-3 shrink-0">
-                            {state === "approved" && (
-                              <span className="text-xs font-bold text-primary whitespace-nowrap">Tap to connect</span>
-                            )}
-                            <StatusBadge status={state} />
-                          </div>
-                        </motion.button>
-                      )}
-                    </motion.div>
-                  );
-                })
+                              <X className="w-4 h-4 mr-2" />
+                              Decline
+                            </Button>
+                          </motion.div>
+                        </div>
+                      </>
+                    ) : (
+                      <ReceivedRequestCard 
+                        req={req} 
+                        index={index} 
+                        onCardClick={handleCardClick}
+                      />
+                    )}
+                  </motion.div>
+                ))
               ) : (
                 <EmptyState title="No requests yet" subtitle="When friends ask for introductions, they'll appear here." image={emptyInboxImg} />
               )}
@@ -315,85 +247,145 @@ export default function RequestsPage() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
-              {SENT_REQUESTS.length > 0 ? (
-                SENT_REQUESTS.map((req) => (
-                  <div 
+              {sentRequests.length > 0 ? (
+                sentRequests.map((req, index) => (
+                  <SentRequestCard 
                     key={req.id} 
-                    className={cn(
-                        "bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex items-center justify-between transition-all",
-                        req.status === "approved" && "cursor-pointer hover:shadow-md hover:border-primary/20 active:scale-[0.98]"
-                    )}
-                    onClick={() => handleCardClick(req)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
-                        <AvatarImage src={req.avatar} />
-                        <AvatarFallback>{req.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-bold text-foreground">{req.name}</h3>
-                        <p className="text-xs text-muted-foreground">{req.timestamp}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                        {req.status === "approved" && (
-                            <span className="text-xs font-bold text-primary hidden sm:block">Tap to connect</span>
-                        )}
-                        <StatusBadge status={req.status} />
-                    </div>
-                  </div>
+                    req={req} 
+                    index={index}
+                    onCardClick={handleCardClick}
+                  />
                 ))
               ) : (
-                <EmptyState title="No sent requests" subtitle="Send an introduction request from someone's mini-profile." image={emptyInboxImg} />
+                <EmptyState title="No sent requests" subtitle="Send an introduction request from someone's profile." image={emptyInboxImg} />
               )}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Connect Drawer */}
-      <Drawer.Root open={isConnectOpen} onOpenChange={setIsConnectOpen} shouldScaleBackground>
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-md z-50" />
-          <Drawer.Content className="bg-white flex flex-col rounded-t-3xl fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] outline-none shadow-2xl">
-            <div className="p-6 bg-white rounded-t-3xl flex-1 overflow-y-auto">
-              {/* Drag Handle */}
-              <div className="flex justify-center mb-6">
-                <div className="w-12 h-1 rounded-full bg-gray-200" />
-              </div>
-              
-              {selectedContact && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="max-w-md mx-auto pb-6"
-                >
-                  {/* Header */}
-                  <div className="text-center mb-8 space-y-2">
-                    <motion.h2 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.1 }}
-                      className="text-3xl font-bold text-foreground"
-                    >
-                      Connect with {selectedContact.name}
-                    </motion.h2>
-                    <motion.p 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.2 }}
-                      className="text-base text-muted-foreground"
-                    >
-                      Choose how you want to reach out
-                    </motion.p>
-                  </div>
+      <ConnectDrawer 
+        isOpen={isConnectOpen} 
+        onOpenChange={setIsConnectOpen}
+        userId={selectedContactId}
+      />
+    </div>
+  );
+}
 
-                  {/* Connection Options */}
-                  <div className="space-y-3">
-                    {/* WhatsApp */}
-                    <motion.button
+function ReceivedRequestCard({ req, index, onCardClick }: { req: any; index: number; onCardClick: (id: string, userId: string, status: string) => void }) {
+  const { data: fromUser } = useUser(req.fromUserId);
+  
+  return (
+    <motion.button
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className={cn(
+        "w-full flex items-center justify-between p-4 text-left bg-white rounded-2xl border border-gray-50 shadow-sm transition-all",
+        req.status === "approved" && "cursor-pointer hover:shadow-md hover:border-primary/20 active:scale-[0.98]"
+      )}
+      onClick={() => onCardClick(req.id, req.fromUserId, req.status)}
+      disabled={req.status !== "approved"}
+    >
+      <div className="flex items-center gap-3">
+        <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
+          <AvatarImage src={fromUser?.photoURL || GENERATED_IMAGES[index % 3]} />
+          <AvatarFallback>{fromUser?.fullName?.[0] || "U"}</AvatarFallback>
+        </Avatar>
+        <div className="text-left">
+          <h3 className="font-bold text-foreground text-sm">{fromUser?.fullName || fromUser?.username}</h3>
+          <p className="text-xs text-muted-foreground">{formatTimeAgo(req.createdAt)}</p>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-3 shrink-0">
+        {req.status === "approved" && (
+          <span className="text-xs font-bold text-primary whitespace-nowrap">Tap to connect</span>
+        )}
+        <StatusBadge status={req.status} />
+      </div>
+    </motion.button>
+  );
+}
+
+function SentRequestCard({ req, index, onCardClick }: { req: any; index: number; onCardClick: (id: string, userId: string, status: string) => void }) {
+  const { data: toUser } = useUser(req.toUserId);
+  
+  return (
+    <div 
+      className={cn(
+        "bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex items-center justify-between transition-all",
+        req.status === "approved" && "cursor-pointer hover:shadow-md hover:border-primary/20 active:scale-[0.98]"
+      )}
+      onClick={() => onCardClick(req.id, req.toUserId, req.status)}
+      data-testid={`request-sent-${req.id}`}
+    >
+      <div className="flex items-center gap-3">
+        <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
+          <AvatarImage src={toUser?.photoURL || GENERATED_IMAGES[index % 3]} />
+          <AvatarFallback>{toUser?.fullName?.[0] || "U"}</AvatarFallback>
+        </Avatar>
+        <div>
+          <h3 className="font-bold text-foreground">{toUser?.fullName || toUser?.username}</h3>
+          <p className="text-xs text-muted-foreground">{formatTimeAgo(req.createdAt)}</p>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-2">
+        {req.status === "approved" && (
+          <span className="text-xs font-bold text-primary hidden sm:block">Tap to connect</span>
+        )}
+        <StatusBadge status={req.status} />
+      </div>
+    </div>
+  );
+}
+
+function ConnectDrawer({ isOpen, onOpenChange, userId }: { isOpen: boolean; onOpenChange: (open: boolean) => void; userId: string | null }) {
+  const { data: user } = useUser(userId || "");
+  
+  return (
+    <Drawer.Root open={isOpen} onOpenChange={onOpenChange} shouldScaleBackground>
+      <Drawer.Portal>
+        <Drawer.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-md z-50" />
+        <Drawer.Content className="bg-white flex flex-col rounded-t-3xl fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] outline-none shadow-2xl">
+          <div className="p-6 bg-white rounded-t-3xl flex-1 overflow-y-auto">
+            <div className="flex justify-center mb-6">
+              <div className="w-12 h-1 rounded-full bg-gray-200" />
+            </div>
+            
+            {user && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="max-w-md mx-auto pb-6"
+              >
+                <div className="text-center mb-8 space-y-2">
+                  <motion.h2 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="text-3xl font-bold text-foreground"
+                  >
+                    Connect with {user.fullName?.split(" ")[0] || user.username}
+                  </motion.h2>
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-base text-muted-foreground"
+                  >
+                    Choose how you want to reach out
+                  </motion.p>
+                </div>
+
+                <div className="space-y-3">
+                  {user.whatsappNumber && (
+                    <motion.a
+                      href={`https://wa.me/${user.whatsappNumber.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
@@ -408,10 +400,14 @@ export default function RequestsPage() {
                         <span className="text-lg font-bold text-[#075E54]">WhatsApp</span>
                       </div>
                       <ChevronRight className="w-5 h-5 text-[#25D366] group-hover:translate-x-1 transition-transform" />
-                    </motion.button>
+                    </motion.a>
+                  )}
 
-                    {/* Instagram */}
-                    <motion.button
+                  {user.instagramHandle && (
+                    <motion.a
+                      href={`https://instagram.com/${user.instagramHandle.replace("@", "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.4 }}
@@ -426,10 +422,12 @@ export default function RequestsPage() {
                         <span className="text-lg font-bold text-[#8134AF]">Instagram</span>
                       </div>
                       <ChevronRight className="w-5 h-5 text-[#E1306C] group-hover:translate-x-1 transition-transform" />
-                    </motion.button>
+                    </motion.a>
+                  )}
 
-                    {/* Phone Call */}
-                    <motion.button
+                  {user.phoneNumber && (
+                    <motion.a
+                      href={`tel:${user.phoneNumber}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.5 }}
@@ -444,205 +442,56 @@ export default function RequestsPage() {
                         <span className="text-lg font-bold text-[#0040DD]">Phone Call</span>
                       </div>
                       <ChevronRight className="w-5 h-5 text-[#007AFF] group-hover:translate-x-1 transition-transform" />
-                    </motion.button>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
+                    </motion.a>
+                  )}
 
-      {/* Confirmation Modal - Approve */}
-      <AnimatePresence>
-        {confirmationModal?.type === "approve" && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100]"
-              onClick={() => setConfirmationModal(null)}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 40 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-0 flex items-end justify-center z-[101] pointer-events-none"
-            >
-              <motion.div
-                className="w-full max-w-md bg-white rounded-t-3xl p-8 shadow-2xl pointer-events-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Animated checkmark */}
-                <motion.div
-                  className="flex justify-center mb-6"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.1, type: "spring", damping: 12 }}
-                >
-                  <motion.div
-                    className="w-20 h-20 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center"
-                    animate={{
-                      boxShadow: [
-                        "0 0 0 0 rgba(34, 197, 94, 0.3)",
-                        "0 0 0 20px rgba(34, 197, 94, 0)",
-                      ],
-                    }}
-                    transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 0.5 }}
-                  >
-                    <Check className="w-10 h-10 text-green-600" strokeWidth={3} />
-                  </motion.div>
-                </motion.div>
-
-                <motion.div
-                  className="text-center mb-8"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <h3 className="text-2xl font-bold text-foreground mb-2">Introduction Approved</h3>
-                  <p className="text-muted-foreground">We'll let both sides know you approved this introduction.</p>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button
-                    onClick={() => {
-                      setShowConfirmationOnly(false);
-                      handleConfirmApproval();
-                    }}
-                    className="w-full h-14 rounded-2xl text-base font-bold shadow-lg shadow-green-500/25 bg-gradient-to-r from-green-500 to-emerald-500 hover:opacity-90 transition-opacity text-white"
-                  >
-                    Continue
-                  </Button>
-                </motion.div>
+                  {!user.whatsappNumber && !user.instagramHandle && !user.phoneNumber && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No contact information shared yet
+                    </div>
+                  )}
+                </div>
               </motion.div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Confirmation Modal - Decline */}
-      <AnimatePresence>
-        {confirmationModal?.type === "decline" && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100]"
-              onClick={() => setConfirmationModal(null)}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 40 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-0 flex items-end justify-center z-[101] pointer-events-none"
-            >
-              <motion.div
-                className="w-full max-w-md bg-white rounded-t-3xl p-8 shadow-2xl pointer-events-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Animated X */}
-                <motion.div
-                  className="flex justify-center mb-6"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.1, type: "spring", damping: 12 }}
-                >
-                  <motion.div
-                    className="w-20 h-20 bg-gradient-to-br from-red-100 to-rose-100 rounded-full flex items-center justify-center"
-                    animate={{
-                      boxShadow: [
-                        "0 0 0 0 rgba(239, 68, 68, 0.3)",
-                        "0 0 0 20px rgba(239, 68, 68, 0)",
-                      ],
-                    }}
-                    transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 0.5 }}
-                  >
-                    <X className="w-10 h-10 text-red-600" strokeWidth={3} />
-                  </motion.div>
-                </motion.div>
-
-                <motion.div
-                  className="text-center mb-8"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <h3 className="text-2xl font-bold text-foreground mb-2">Request Declined</h3>
-                  <p className="text-muted-foreground">The requester will not be notified.</p>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button
-                    onClick={() => {
-                      setShowConfirmationOnly(false);
-                      handleConfirmDecline();
-                    }}
-                    className="w-full h-14 rounded-2xl text-base font-bold shadow-lg shadow-red-500/25 bg-gradient-to-r from-red-500 to-rose-500 hover:opacity-90 transition-opacity text-white"
-                  >
-                    Okay
-                  </Button>
-                </motion.div>
-              </motion.div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+            )}
+          </div>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
   const styles = {
-    pending: "bg-blue-50 text-blue-600 border-blue-100",
-    approved: "bg-green-50 text-green-600 border-green-100",
-    declined: "bg-red-50 text-red-600 border-red-100",
-  };
-  
-  const icons = {
-    pending: Clock,
-    approved: UserCheck,
-    declined: UserX
+    approved: { bg: "bg-green-50", text: "text-green-600", border: "border-green-100", icon: UserCheck },
+    declined: { bg: "bg-red-50", text: "text-red-600", border: "border-red-100", icon: UserX },
+    pending: { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-100", icon: Clock }
   };
 
-  const Icon = icons[status as keyof typeof icons];
-  const style = styles[status as keyof typeof styles];
-  const label = status.charAt(0).toUpperCase() + status.slice(1);
+  const style = styles[status as keyof typeof styles] || styles.pending;
+  const Icon = style.icon;
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      className={cn("px-3 py-1.5 rounded-full border flex items-center gap-1.5 text-xs font-bold", style)}
+      className={cn("px-3 py-1.5 rounded-full border flex items-center gap-1.5 text-xs font-bold", style.bg, style.text, style.border)}
     >
       <Icon className="w-3.5 h-3.5" />
-      {label}
+      {status.charAt(0).toUpperCase() + status.slice(1)}
     </motion.div>
   );
 }
 
 function EmptyState({ title, subtitle, image }: { title: string; subtitle: string; image?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex flex-col items-center justify-center py-16 text-center px-4"
+    >
       {image && <img src={image} alt={title} className="w-32 h-32 mb-6 opacity-90" />}
       <h3 className="text-lg font-bold text-foreground mb-2">{title}</h3>
       <p className="text-sm text-muted-foreground">{subtitle}</p>
-    </div>
+    </motion.div>
   );
 }

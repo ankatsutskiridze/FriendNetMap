@@ -1,8 +1,6 @@
-import { type User, type InsertUser, type IntroRequest, type InsertIntroRequest, users, introRequests } from "@shared/schema";
+import { type User, type InsertUser, type IntroRequest, type InsertIntroRequest, type UserSettings, type UpdateSettings, users, introRequests, userSettings } from "@shared/schema";
 import { db } from "../db";
-import { eq, or, and, inArray, sql, type ExtractTablesWithRelations } from "drizzle-orm";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import type { PgTransaction } from "drizzle-orm/pg-core";
+import { eq, or, and, inArray, sql, ilike, ne } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -10,8 +8,10 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<void>;
   getAllUsers(): Promise<User[]>;
   getUsersByIds(ids: string[]): Promise<User[]>;
+  searchUsers(query: string, excludeUserId?: string): Promise<User[]>;
   addFriend(userId: string, friendId: string): Promise<void>;
   removeFriend(userId: string, friendId: string): Promise<void>;
   
@@ -22,6 +22,12 @@ export interface IStorage {
   getIntroRequestsViaUser(viaUserId: string): Promise<IntroRequest[]>;
   updateIntroRequestStatus(id: string, status: string): Promise<IntroRequest | undefined>;
   getIntroRequestBetween(fromUserId: string, toUserId: string): Promise<IntroRequest | undefined>;
+  getAllIntroRequestsForUser(userId: string): Promise<IntroRequest[]>;
+  
+  // Settings methods
+  getSettings(userId: string): Promise<UserSettings | undefined>;
+  createSettings(userId: string): Promise<UserSettings>;
+  updateSettings(userId: string, updates: UpdateSettings): Promise<UserSettings | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -125,6 +131,61 @@ export class DatabaseStorage implements IStorage {
         eq(introRequests.toUserId, toUserId)
       ))
       .limit(1);
+    return result[0];
+  }
+
+  async getAllIntroRequestsForUser(userId: string): Promise<IntroRequest[]> {
+    return await db.select().from(introRequests)
+      .where(or(
+        eq(introRequests.fromUserId, userId),
+        eq(introRequests.toUserId, userId),
+        eq(introRequests.viaUserId, userId)
+      ))
+      .orderBy(sql`${introRequests.createdAt} DESC`);
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  async searchUsers(query: string, excludeUserId?: string): Promise<User[]> {
+    if (!query.trim()) {
+      if (excludeUserId) {
+        return await db.select().from(users).where(ne(users.id, excludeUserId)).limit(20);
+      }
+      return await db.select().from(users).limit(20);
+    }
+    
+    const searchPattern = `%${query}%`;
+    let results = await db.select().from(users)
+      .where(or(
+        ilike(users.fullName, searchPattern),
+        ilike(users.username, searchPattern)
+      ))
+      .limit(20);
+    
+    if (excludeUserId) {
+      results = results.filter(u => u.id !== excludeUserId);
+    }
+    return results;
+  }
+
+  // Settings methods
+  async getSettings(userId: string): Promise<UserSettings | undefined> {
+    const result = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1);
+    return result[0];
+  }
+
+  async createSettings(userId: string): Promise<UserSettings> {
+    const result = await db.insert(userSettings).values({ userId }).returning();
+    return result[0];
+  }
+
+  async updateSettings(userId: string, updates: UpdateSettings): Promise<UserSettings | undefined> {
+    const result = await db.update(userSettings)
+      .set(updates)
+      .where(eq(userSettings.userId, userId))
+      .returning();
     return result[0];
   }
 }
