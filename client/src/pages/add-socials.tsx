@@ -14,8 +14,8 @@ export default function AddSocialsPage() {
   });
 
   const handleContinue = () => {
-    // Simulate saving socials
-    setLocation("/");
+    // Simulate saving socials and go to success
+    setLocation("/onboarding-success");
   };
 
   return (
