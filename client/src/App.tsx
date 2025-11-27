@@ -8,6 +8,7 @@ import RequestsPage from "@/pages/requests";
 import ProfilePage from "@/pages/profile";
 import EditProfilePage from "@/pages/edit-profile";
 import CreateProfilePage from "@/pages/create-profile";
+import AddSocialsPage from "@/pages/add-socials";
 import RequestIntroPage from "@/pages/request-intro";
 import WelcomePage from "@/pages/welcome";
 import NotFound from "@/pages/not-found";
@@ -17,8 +18,8 @@ import { useLocation } from "wouter";
 function Router() {
   const [location] = useLocation();
   
-  // Hide BottomNav on Welcome and Create Profile pages
-  const showBottomNav = location !== "/welcome" && location !== "/create-profile";
+  // Hide BottomNav on Welcome and Onboarding pages
+  const showBottomNav = !["/welcome", "/create-profile", "/add-socials"].includes(location);
 
   return (
     <div className="relative min-h-screen">
@@ -26,6 +27,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/welcome" component={WelcomePage} />
         <Route path="/create-profile" component={CreateProfilePage} />
+        <Route path="/add-socials" component={AddSocialsPage} />
         <Route path="/requests" component={RequestsPage} />
         <Route path="/profile" component={ProfilePage} />
         <Route path="/profile/edit" component={EditProfilePage} />

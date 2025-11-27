@@ -19,8 +19,8 @@ export default function CreateProfilePage() {
   });
 
   const handleContinue = () => {
-    // Simulate saving profile
-    setLocation("/");
+    // Simulate saving profile and move to next step
+    setLocation("/add-socials");
   };
 
   return (
