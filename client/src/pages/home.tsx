@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
-import { Plus, Minus, Navigation, UserPlus, Users } from "lucide-react";
+import { Plus, Minus, Navigation, UserPlus, Users, Bell } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "vaul";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 // Assets
 import imgWoman from "@assets/generated_images/friendly_young_woman_avatar.png";
@@ -162,6 +163,7 @@ export default function FriendsMap() {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [location, setLocation] = useLocation();
   
   // Framer motion values for drag/pan
   const x = useMotionValue(0);
@@ -199,6 +201,17 @@ export default function FriendsMap() {
       <header className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 py-4 bg-white/60 backdrop-blur-md border-b border-white/20 shadow-sm">
         <h1 className="text-xl font-bold text-primary tracking-tight">Friends Map</h1>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full hover:bg-white/50 text-muted-foreground hover:text-primary transition-colors" 
+            onClick={() => setLocation("/requests")}
+          >
+            <div className="relative">
+                <Bell className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+            </div>
+          </Button>
           <span className="text-xs font-medium text-muted-foreground hidden sm:block">Welcome, You</span>
           <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm">
             <AvatarImage src={ME.image} />
