@@ -31,6 +31,7 @@ Preferred communication style: Simple, everyday language.
 - Custom hooks pattern for API interactions (`useCurrentUser`, `useFriends`, `useIntroRequests`, etc.)
 
 **Key Pages & Features**
+- Intro slides for first-time users explaining app features (swipeable with Framer Motion gestures)
 - Interactive friends map with draggable bubbles showing 1st and 2nd degree connections
 - Introduction request system with pending/approved/declined states
 - Friend discovery and search functionality
