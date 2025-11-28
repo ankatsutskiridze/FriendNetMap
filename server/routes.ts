@@ -141,6 +141,21 @@ export async function registerRoutes(
     }
   });
 
+  // Search users - MUST be before /api/users/:id to avoid route conflict
+  app.get("/api/users/search", requireAuth, async (req: any, res) => {
+    try {
+      const query = (req.query.q as string) || "";
+      console.log(`[search] Query: "${query}", User ID: ${req.user.id}`);
+      const users = await storage.searchUsers(query, req.user.id);
+      console.log(`[search] Found ${users.length} results for query "${query}"`);
+      const usersWithoutPasswords = users.map(({ password, ...user }) => user);
+      res.json(usersWithoutPasswords);
+    } catch (err: any) {
+      console.error(`[search] Database error:`, err);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/users/:id", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
@@ -307,21 +322,6 @@ export async function registerRoutes(
       const updated = await storage.updateIntroRequestStatus(req.params.id, "declined");
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  // Search users
-  app.get("/api/users/search", requireAuth, async (req: any, res) => {
-    try {
-      const query = (req.query.q as string) || "";
-      console.log(`[search] Query: "${query}", User ID: ${req.user.id}`);
-      const users = await storage.searchUsers(query, req.user.id);
-      console.log(`[search] Found ${users.length} results`);
-      const usersWithoutPasswords = users.map(({ password, ...user }) => user);
-      res.json(usersWithoutPasswords);
-    } catch (err: any) {
-      console.error(`[search] Error: ${err.message}`);
       res.status(500).json({ message: err.message });
     }
   });
