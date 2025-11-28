@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -13,6 +14,7 @@ import EditProfilePage from "@/pages/edit-profile";
 import RequestIntroPage from "@/pages/request-intro";
 import FindFriendsPage from "@/pages/find-friends";
 import AuthPage from "@/pages/auth";
+import IntroPage from "@/pages/intro";
 import NotFound from "@/pages/not-found";
 import { BottomNav } from "@/components/bottom-nav";
 import { useLocation } from "wouter";
@@ -20,8 +22,14 @@ import { useLocation } from "wouter";
 function Router() {
   const { user, loading } = useAuth();
   const [location] = useLocation();
+  const [hasSeenIntro, setHasSeenIntro] = useState<boolean | null>(null);
 
-  if (loading) {
+  useEffect(() => {
+    const seen = localStorage.getItem("hasSeenIntro") === "true";
+    setHasSeenIntro(seen);
+  }, []);
+
+  if (loading || hasSeenIntro === null) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-white flex items-center justify-center">
         <div className="text-center">
@@ -32,6 +40,10 @@ function Router() {
         </div>
       </div>
     );
+  }
+
+  if (!hasSeenIntro && !user) {
+    return <IntroPage onComplete={() => setHasSeenIntro(true)} />;
   }
 
   if (!user) {
