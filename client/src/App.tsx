@@ -41,7 +41,7 @@ function Router() {
   // Hide BottomNav on certain pages
   const showBottomNav = !["/profile/edit", "/request-intro"].some((path) =>
     location.startsWith(path)
-  );
+  ) && !location.match(/^\/profile\/[^/]+$/);
 
   return (
     <div className="relative min-h-screen">
@@ -49,9 +49,10 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/requests" component={RequestsPage} />
         <Route path="/connections" component={ConnectionsPage} />
+        <Route path="/profile/edit" component={EditProfilePage} />
+        <Route path="/profile/:userId" component={ProfilePage} />
         <Route path="/profile" component={ProfilePage} />
         <Route path="/settings" component={SettingsPage} />
-        <Route path="/profile/edit" component={EditProfilePage} />
         <Route path="/request-intro/:id" component={RequestIntroPage} />
         <Route path="/find-friends" component={FindFriendsPage} />
         <Route component={NotFound} />
