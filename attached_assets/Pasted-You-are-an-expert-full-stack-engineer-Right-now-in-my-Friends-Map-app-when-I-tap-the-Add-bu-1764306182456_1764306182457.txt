@@ -1,0 +1,55 @@
+You are an expert full-stack engineer.  
+Right now, in my Friends Map app, when I tap the **Add** button on the “Find Friends” screen, it immediately creates a friendship/connection without any confirmation from the other user.  
+
+I want to change this to a proper **friend request** flow with approval.
+
+Please implement the following:
+
+1. Data model:
+   - Use the existing requests system or create a `friendRequests` table.
+   - Fields should include at least:
+     - id
+     - fromUserId  (who sends the request)
+     - toUserId    (who receives the request)
+     - status: "pending" | "approved" | "declined"
+     - createdAt
+   - If there is already a generic `requests` table (used for introductions), add a `type` field:
+     - type: "friend" | "introduction"
+     and reuse it for friend requests.
+
+2. “Add” button behavior on Find Friends:
+   - When the current user taps **Add** on a person:
+     - Do NOT create a connection directly.
+     - Instead, create a friend request with:
+       - fromUserId = currentUser.id
+       - toUserId = selectedUser.id
+       - type = "friend"
+       - status = "pending".
+   - Update the UI so the button changes to a disabled “Pending” state for that user.
+
+3. Requests screen:
+   - In the **Requests → Received** tab, show friend requests where:
+       toUserId === currentUser.id AND type === "friend".
+   - Each item should say something like:
+       "{fromUserName} wants to connect with you"
+     and show **Approve** / **Decline** buttons.
+
+4. Approve / Decline logic:
+   - On Approve:
+     - Update the request status to "approved".
+     - Create an entry in the connections/friendships table (or whatever structure the map uses) linking both users.
+     - Ensure the Friends Map updates so both users appear connected.
+   - On Decline:
+     - Update status to "declined".
+     - Do not create a connection.
+
+5. Sent tab:
+   - In **Requests → Sent**, show friend requests where:
+       fromUserId === currentUser.id AND type === "friend",
+     with their current status (pending / approved / declined).
+
+6. Make sure:
+   - A user cannot send duplicate friend requests if one is already pending or approved.
+   - If a friendship already exists, the Add button should show “Friend” instead of Add.
+
+7. Finally, explain in comments or a short note what changed compared to the old behavior (direct connection vs. request + approval).

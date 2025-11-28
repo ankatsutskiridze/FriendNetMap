@@ -20,9 +20,10 @@ export const users = pgTable("users", {
 
 export const introRequests = pgTable("intro_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull().default("introduction"),
   fromUserId: varchar("from_user_id").notNull().references(() => users.id),
   toUserId: varchar("to_user_id").notNull().references(() => users.id),
-  viaUserId: varchar("via_user_id").notNull().references(() => users.id),
+  viaUserId: varchar("via_user_id").references(() => users.id),
   message: text("message"),
   status: text("status").notNull().default("pending"),
   connectorStatus: text("connector_status").notNull().default("pending"),
@@ -48,6 +49,19 @@ export const insertIntroRequestSchema = createInsertSchema(introRequests).omit({
   id: true,
   createdAt: true,
   status: true,
+  connectorStatus: true,
+  targetStatus: true,
+});
+
+export const insertFriendRequestSchema = createInsertSchema(introRequests).omit({
+  id: true,
+  createdAt: true,
+  status: true,
+  connectorStatus: true,
+  targetStatus: true,
+  viaUserId: true,
+}).extend({
+  type: z.literal("friend"),
 });
 
 export const insertSettingsSchema = createInsertSchema(userSettings).omit({
