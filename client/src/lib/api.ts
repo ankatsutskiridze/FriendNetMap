@@ -48,10 +48,12 @@ export function useUser(userId: string) {
   });
 }
 
-export function useSearchUsers(query: string) {
+export function useSearchUsers(query: string, enabled: boolean = true) {
   return useQuery<UserWithoutPassword[]>({
     queryKey: ["searchUsers", query],
     queryFn: () => fetchJson(`/api/users/search?q=${encodeURIComponent(query)}`),
+    enabled: enabled,
+    retry: false,
   });
 }
 

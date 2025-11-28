@@ -25,9 +25,10 @@ export default function FindFriendsPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const { toast } = useToast();
 
-  const { data: currentUser } = useCurrentUser();
+  const { data: currentUser, isLoading: userLoading, isError: userError } = useCurrentUser();
   const { data: friends = [] } = useFriends();
-  const { data: searchResults = [], isLoading: searchLoading } = useSearchUsers(searchQuery);
+  const isLoggedIn = !!currentUser && !userError;
+  const { data: searchResults = [], isLoading: searchLoading, isError: searchError } = useSearchUsers(searchQuery, isLoggedIn);
   const addFriend = useAddFriend();
 
   const inviteLink = typeof window !== "undefined" ? `${window.location.origin}/auth` : "/auth";
@@ -140,9 +141,28 @@ export default function FindFriendsPage() {
           </div>
         </motion.div>
 
-        {searchLoading ? (
+        {userLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : !isLoggedIn ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">Please log in to search for friends</p>
+            <Button
+              onClick={() => setLocation("/auth")}
+              className="rounded-xl"
+              data-testid="button-login-prompt"
+            >
+              Log In
+            </Button>
+          </div>
+        ) : searchLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : searchError ? (
+          <div className="text-center py-12 text-muted-foreground">
+            Unable to search. Please try again.
           </div>
         ) : (
           <div className="space-y-3">

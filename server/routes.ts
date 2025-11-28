@@ -315,10 +315,13 @@ export async function registerRoutes(
   app.get("/api/users/search", requireAuth, async (req: any, res) => {
     try {
       const query = (req.query.q as string) || "";
+      console.log(`[search] Query: "${query}", User ID: ${req.user.id}`);
       const users = await storage.searchUsers(query, req.user.id);
+      console.log(`[search] Found ${users.length} results`);
       const usersWithoutPasswords = users.map(({ password, ...user }) => user);
       res.json(usersWithoutPasswords);
     } catch (err: any) {
+      console.error(`[search] Error: ${err.message}`);
       res.status(500).json({ message: err.message });
     }
   });
