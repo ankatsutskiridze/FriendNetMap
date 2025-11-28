@@ -101,6 +101,29 @@ export function useAddFriend() {
       queryClient.invalidateQueries({ queryKey: ["friends"] });
       queryClient.invalidateQueries({ queryKey: ["friendsOfFriends"] });
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      queryClient.invalidateQueries({ queryKey: ["introRequests", "sent"] });
+      queryClient.invalidateQueries({ queryKey: ["sentFriendRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["receivedFriendRequests"] });
+    },
+  });
+}
+
+export function useSentFriendRequests() {
+  return useQuery<IntroRequest[]>({
+    queryKey: ["sentFriendRequests"],
+    queryFn: async () => {
+      const requests = await fetchJson<IntroRequest[]>("/api/intro-requests/sent");
+      return requests.filter((r: IntroRequest) => r.type === "friend");
+    },
+  });
+}
+
+export function useReceivedFriendRequests() {
+  return useQuery<IntroRequest[]>({
+    queryKey: ["receivedFriendRequests"],
+    queryFn: async () => {
+      const requests = await fetchJson<IntroRequest[]>("/api/intro-requests/received");
+      return requests.filter((r: IntroRequest) => r.type === "friend" && r.status === "pending");
     },
   });
 }
@@ -163,6 +186,8 @@ export function useApproveIntroRequest() {
       queryClient.invalidateQueries({ queryKey: ["introRequests"] });
       queryClient.invalidateQueries({ queryKey: ["friends"] });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
+      queryClient.invalidateQueries({ queryKey: ["sentFriendRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["receivedFriendRequests"] });
     },
   });
 }
@@ -175,6 +200,8 @@ export function useDeclineIntroRequest() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["introRequests"] });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
+      queryClient.invalidateQueries({ queryKey: ["sentFriendRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["receivedFriendRequests"] });
     },
   });
 }

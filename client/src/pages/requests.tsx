@@ -67,28 +67,25 @@ export default function RequestsPage() {
 
   const isLoading = receivedLoading || sentLoading || !currentUser;
 
-  // Determine if user is connector or target for each received request
+  // Determine the role/type for each received request
   const getReceivedRequestRole = (req: any) => {
     if (!currentUser) return null;
     
-    console.log(`[getReceivedRequestRole] Request ${req.id}:`, {
-      viaUserId: req.viaUserId,
-      toUserId: req.toUserId,
-      currentUserId: currentUser.id,
-      connectorStatus: req.connectorStatus,
-      targetStatus: req.targetStatus,
-      status: req.status
-    });
+    // Friend requests: user is the target (toUser)
+    if (req.type === "friend" && req.toUserId === currentUser.id && req.status === "pending") {
+      return "friend_recipient"; // Direct friend request recipient
+    }
     
-    if (req.viaUserId === currentUser.id && req.connectorStatus === "pending") {
-      console.log(`[getReceivedRequestRole] Returning "connector" for request ${req.id}`);
-      return "connector"; // Stage 1: user is the connector
+    // Introduction requests - two-stage flow
+    if (req.type === "introduction" || !req.type) {
+      if (req.viaUserId === currentUser.id && req.connectorStatus === "pending") {
+        return "connector"; // Stage 1: user is the connector
+      }
+      if (req.toUserId === currentUser.id && req.connectorStatus === "approved" && req.targetStatus === "pending") {
+        return "target"; // Stage 2: user is the target
+      }
     }
-    if (req.toUserId === currentUser.id && req.connectorStatus === "approved" && req.targetStatus === "pending") {
-      console.log(`[getReceivedRequestRole] Returning "target" for request ${req.id}`);
-      return "target"; // Stage 2: user is the target
-    }
-    console.log(`[getReceivedRequestRole] Returning null for request ${req.id}`);
+    
     return null;
   };
 
@@ -212,10 +209,14 @@ export default function RequestsPage() {
                               <span className="text-xs text-muted-foreground">{formatTimeAgo(req.createdAt)}</span>
                             </div>
                             <p className="text-sm text-muted-foreground mt-0.5">
-                              {role === "connector" ? (
+                              {role === "friend_recipient" ? (
+                                <>Wants to connect with you</>
+                              ) : role === "connector" ? (
                                 <>Wants to meet <UserDisplay userId={req.toUserId} fallbackImage="" /> via you</>
-                              ) : (
+                              ) : req.viaUserId ? (
                                 <>Wants to meet you via <UserDisplay userId={req.viaUserId} fallbackImage="" /></>
+                              ) : (
+                                <>Wants to connect with you</>
                               )}
                             </p>
                           </div>

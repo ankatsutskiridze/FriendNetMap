@@ -190,7 +190,7 @@ export async function registerRoutes(
     }
   });
 
-  // Friends routes
+  // Friends routes - Now creates a friend request instead of direct connection
   app.post("/api/friends/:friendId", requireAuth, async (req: any, res) => {
     try {
       const friendId = req.params.friendId;
@@ -205,8 +205,29 @@ export async function registerRoutes(
         return res.status(404).json({ message: "User not found" });
       }
       
-      await storage.addFriend(userId, friendId);
-      res.json({ message: "Friend added successfully" });
+      // Check if they're already friends
+      const currentUser = await storage.getUser(userId);
+      if (currentUser?.friends?.includes(friendId)) {
+        return res.status(400).json({ message: "Already friends" });
+      }
+      
+      // Check if a friend request already exists
+      const existing = await storage.getFriendRequestBetween(userId, friendId);
+      if (existing) {
+        if (existing.status === "pending") {
+          return res.status(400).json({ message: "Friend request already pending" });
+        }
+        if (existing.status === "approved") {
+          return res.status(400).json({ message: "Already friends" });
+        }
+      }
+      
+      // Create a friend request instead of direct connection
+      console.log(`[friend-request/create] User ${userId} sending friend request to ${friendId}`);
+      const request = await storage.createFriendRequest(userId, friendId);
+      console.log(`[friend-request/create] Request created: ${request.id}`);
+      
+      res.json({ message: "Friend request sent", request });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -287,13 +308,11 @@ export async function registerRoutes(
 
   app.get("/api/intro-requests/received", requireAuth, async (req: any, res) => {
     try {
-      // Two-stage flow: 
-      // Stage 1: I am the connector (viaUser) and connectorStatus is pending
-      // Stage 2: I am the target (toUser) and connectorStatus is approved but targetStatus is pending
-      const requests = await storage.getReceivedIntroRequests(req.user.id);
+      // Get all received requests (both friend and introduction)
+      const requests = await storage.getAllReceivedRequests(req.user.id);
       console.log(`[intro-requests/received] User ${req.user.id} has ${requests.length} received requests`);
       requests.forEach(r => {
-        console.log(`  - Request ${r.id}: from=${r.fromUserId}, to=${r.toUserId}, via=${r.viaUserId}, connectorStatus=${r.connectorStatus}, targetStatus=${r.targetStatus}`);
+        console.log(`  - Request ${r.id}: type=${r.type}, from=${r.fromUserId}, to=${r.toUserId}, via=${r.viaUserId}, status=${r.status}, connectorStatus=${r.connectorStatus}, targetStatus=${r.targetStatus}`);
       });
       res.json(requests);
     } catch (err: any) {
@@ -310,6 +329,30 @@ export async function registerRoutes(
       
       const currentUserId = req.user.id;
       
+      // Handle FRIEND requests
+      if (request.type === "friend") {
+        if (request.toUserId !== currentUserId) {
+          return res.status(403).json({ message: "Forbidden - not authorized to approve this request" });
+        }
+        if (request.status !== "pending") {
+          return res.status(400).json({ message: "Request already processed" });
+        }
+        
+        console.log(`[FRIEND REQUEST APPROVAL] User ${currentUserId} approved friend request from ${request.fromUserId}`);
+        
+        // Update status to approved
+        const updated = await storage.updateIntroRequestStatus(request.id, "approved");
+        
+        // Add them as friends
+        await storage.addFriend(request.fromUserId, request.toUserId);
+        
+        console.log(`[FRIENDS ADDED] ${request.fromUserId} and ${request.toUserId} are now friends!`);
+        
+        res.json(updated);
+        return;
+      }
+      
+      // Handle INTRODUCTION requests (two-stage flow)
       // Stage 1: Connector (viaUser) approves
       if (request.viaUserId === currentUserId && request.connectorStatus === "pending") {
         console.log(`[STAGE 1 APPROVAL] Connector ${currentUserId} approved request ${request.id}`);
@@ -360,6 +403,25 @@ export async function registerRoutes(
       
       const currentUserId = req.user.id;
       
+      // Handle FRIEND requests
+      if (request.type === "friend") {
+        if (request.toUserId !== currentUserId) {
+          return res.status(403).json({ message: "Forbidden - not authorized to decline this request" });
+        }
+        if (request.status !== "pending") {
+          return res.status(400).json({ message: "Request already processed" });
+        }
+        
+        console.log(`[FRIEND REQUEST DECLINE] User ${currentUserId} declined friend request from ${request.fromUserId}`);
+        
+        // Update status to declined
+        const updated = await storage.updateIntroRequestStatus(request.id, "declined");
+        
+        res.json(updated);
+        return;
+      }
+      
+      // Handle INTRODUCTION requests
       // Stage 1: Connector (viaUser) declines
       if (request.viaUserId === currentUserId && request.connectorStatus === "pending") {
         console.log(`[STAGE 1 DECLINE] Connector ${currentUserId} declined request ${request.id}`);

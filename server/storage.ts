@@ -27,6 +27,13 @@ export interface IStorage {
   getIntroRequestBetween(fromUserId: string, toUserId: string): Promise<IntroRequest | undefined>;
   getAllIntroRequestsForUser(userId: string): Promise<IntroRequest[]>;
   
+  // Friend request methods
+  createFriendRequest(fromUserId: string, toUserId: string): Promise<IntroRequest>;
+  getFriendRequestBetween(fromUserId: string, toUserId: string): Promise<IntroRequest | undefined>;
+  getReceivedFriendRequests(userId: string): Promise<IntroRequest[]>;
+  getSentFriendRequests(userId: string): Promise<IntroRequest[]>;
+  getAllReceivedRequests(userId: string): Promise<IntroRequest[]>;
+  
   // Settings methods
   getSettings(userId: string): Promise<UserSettings | undefined>;
   createSettings(userId: string): Promise<UserSettings>;
@@ -69,15 +76,39 @@ export class DatabaseStorage implements IStorage {
 
   async addFriend(userId: string, friendId: string): Promise<void> {
     await db.transaction(async (tx: any) => {
-      // Add friendId to userId's friends array
-      await tx.update(users)
-        .set({ friends: sql`array_append(${users.friends}, ${friendId})` })
-        .where(eq(users.id, userId));
+      // Verify both users exist before updating
+      const user1Check = await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
+      const user2Check = await tx.select({ id: users.id }).from(users).where(eq(users.id, friendId)).limit(1);
       
-      // Add userId to friendId's friends array
-      await tx.update(users)
-        .set({ friends: sql`array_append(${users.friends}, ${userId})` })
-        .where(eq(users.id, friendId));
+      if (!user1Check[0]) {
+        throw new Error(`User ${userId} not found`);
+      }
+      if (!user2Check[0]) {
+        throw new Error(`User ${friendId} not found`);
+      }
+      
+      // Use SQL array operations to atomically add friends only if not present
+      // Each CASE WHEN is evaluated atomically within the UPDATE statement
+      
+      // Add friendId to userId's friends array (only if not already present)
+      await tx.execute(sql`
+        UPDATE ${users} 
+        SET friends = CASE 
+          WHEN ${friendId} = ANY(COALESCE(friends, ARRAY[]::text[])) THEN friends
+          ELSE array_append(COALESCE(friends, ARRAY[]::text[]), ${friendId})
+        END
+        WHERE id = ${userId}
+      `);
+      
+      // Add userId to friendId's friends array (only if not already present)
+      await tx.execute(sql`
+        UPDATE ${users} 
+        SET friends = CASE 
+          WHEN ${userId} = ANY(COALESCE(friends, ARRAY[]::text[])) THEN friends
+          ELSE array_append(COALESCE(friends, ARRAY[]::text[]), ${userId})
+        END
+        WHERE id = ${friendId}
+      `);
     });
   }
 
@@ -228,6 +259,78 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userSettings.userId, userId))
       .returning();
     return result[0];
+  }
+
+  // Friend request methods
+  async createFriendRequest(fromUserId: string, toUserId: string): Promise<IntroRequest> {
+    const result = await db.insert(introRequests).values({
+      type: "friend",
+      fromUserId,
+      toUserId,
+      viaUserId: null,
+    }).returning();
+    return result[0];
+  }
+
+  async getFriendRequestBetween(fromUserId: string, toUserId: string): Promise<IntroRequest | undefined> {
+    // Check both directions since friendship is mutual
+    const result = await db.select().from(introRequests)
+      .where(and(
+        eq(introRequests.type, "friend"),
+        or(
+          and(eq(introRequests.fromUserId, fromUserId), eq(introRequests.toUserId, toUserId)),
+          and(eq(introRequests.fromUserId, toUserId), eq(introRequests.toUserId, fromUserId))
+        )
+      ))
+      .limit(1);
+    return result[0];
+  }
+
+  async getReceivedFriendRequests(userId: string): Promise<IntroRequest[]> {
+    return await db.select().from(introRequests)
+      .where(and(
+        eq(introRequests.type, "friend"),
+        eq(introRequests.toUserId, userId),
+        eq(introRequests.status, "pending")
+      ));
+  }
+
+  async getSentFriendRequests(userId: string): Promise<IntroRequest[]> {
+    return await db.select().from(introRequests)
+      .where(and(
+        eq(introRequests.type, "friend"),
+        eq(introRequests.fromUserId, userId)
+      ));
+  }
+
+  async getAllReceivedRequests(userId: string): Promise<IntroRequest[]> {
+    // Get all received requests (both friend and introduction)
+    // Friend requests: toUserId === userId and type === 'friend' and status === 'pending'
+    // Introduction requests (Stage 1): viaUserId === userId and connectorStatus === 'pending' and type === 'introduction'
+    // Introduction requests (Stage 2): toUserId === userId and connectorStatus === 'approved' and targetStatus === 'pending' and type === 'introduction'
+    return await db.select().from(introRequests)
+      .where(or(
+        // Friend requests
+        and(
+          eq(introRequests.type, "friend"),
+          eq(introRequests.toUserId, userId),
+          eq(introRequests.status, "pending")
+        ),
+        // Introduction Stage 1: connector needs to approve
+        and(
+          eq(introRequests.type, "introduction"),
+          eq(introRequests.viaUserId, userId),
+          eq(introRequests.connectorStatus, "pending")
+        ),
+        // Introduction Stage 2: target needs to approve (after connector approved)
+        and(
+          eq(introRequests.type, "introduction"),
+          eq(introRequests.toUserId, userId),
+          eq(introRequests.connectorStatus, "approved"),
+          eq(introRequests.targetStatus, "pending")
+        )
+      ))
+      .orderBy(sql`${introRequests.createdAt} DESC`);
   }
 }
 

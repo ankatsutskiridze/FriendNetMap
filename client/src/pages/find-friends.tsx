@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
 import { Drawer } from "vaul";
 import { useToast } from "@/hooks/use-toast";
-import { useSearchUsers, useAddFriend, useCurrentUser, useFriends } from "@/lib/api";
+import { useSearchUsers, useAddFriend, useCurrentUser, useFriends, useSentFriendRequests, useReceivedFriendRequests } from "@/lib/api";
 
 import imgWoman from "@assets/generated_images/friendly_young_woman_avatar.png";
 import imgMan from "@assets/generated_images/friendly_young_man_avatar.png";
@@ -27,6 +27,8 @@ export default function FindFriendsPage() {
 
   const { data: currentUser, isLoading: userLoading, isError: userError } = useCurrentUser();
   const { data: friends = [] } = useFriends();
+  const { data: sentFriendRequests = [] } = useSentFriendRequests();
+  const { data: receivedFriendRequests = [] } = useReceivedFriendRequests();
   const isLoggedIn = !!currentUser && !userError;
   const { data: searchResults = [], isLoading: searchLoading, isError: searchError } = useSearchUsers(searchQuery, isLoggedIn);
   const addFriend = useAddFriend();
@@ -34,19 +36,32 @@ export default function FindFriendsPage() {
   const inviteLink = typeof window !== "undefined" ? `${window.location.origin}/auth` : "/auth";
 
   const friendIds = new Set(friends.map(f => f.id));
+  
+  // Check both sent and received pending requests
+  const pendingSentIds = new Set(
+    sentFriendRequests
+      .filter(r => r.status === "pending")
+      .map(r => r.toUserId)
+  );
+  const pendingReceivedIds = new Set(
+    receivedFriendRequests.map(r => r.fromUserId)
+  );
+  
+  // A user has pending requests if either sent or received
+  const hasPendingRequest = (userId: string) => pendingSentIds.has(userId) || pendingReceivedIds.has(userId);
 
   const handleAddUser = async (e: React.MouseEvent, userId: string) => {
     e.stopPropagation();
     try {
       await addFriend.mutateAsync(userId);
       toast({
-        title: "Friend Added",
-        description: "They've been added to your connections.",
+        title: "Request Sent",
+        description: "Your friend request has been sent. You'll be notified when they respond.",
       });
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message || "Failed to add friend",
+        description: err.message || "Failed to send friend request",
         variant: "destructive"
       });
     }
@@ -168,6 +183,7 @@ export default function FindFriendsPage() {
           <div className="space-y-3">
             {searchResults.map((user, index) => {
               const isFriend = friendIds.has(user.id);
+              const isPending = hasPendingRequest(user.id);
               const isAdding = addFriend.isPending && addFriend.variables === user.id;
               
               return (
@@ -199,10 +215,12 @@ export default function FindFriendsPage() {
                   <Button
                     size="sm"
                     onClick={(e) => handleAddUser(e, user.id)}
-                    disabled={isFriend || isAdding}
+                    disabled={isFriend || isPending || isAdding}
                     className={`rounded-full px-5 font-bold transition-all ${
                       isFriend
                         ? "bg-green-100 text-green-700 hover:bg-green-100 shadow-none border border-green-200"
+                        : isPending
+                        ? "bg-yellow-50 text-yellow-700 hover:bg-yellow-50 shadow-none border border-yellow-200"
                         : "bg-primary text-white hover:opacity-90 shadow-md shadow-primary/20"
                     }`}
                     data-testid={`button-add-${user.id}`}
@@ -214,6 +232,8 @@ export default function FindFriendsPage() {
                         <UserCheck className="w-4 h-4 mr-1" />
                         Friends
                       </>
+                    ) : isPending ? (
+                      "Pending"
                     ) : (
                       <>
                         <UserPlus className="w-4 h-4 mr-1" />
@@ -283,15 +303,15 @@ export default function FindFriendsPage() {
                     </div>
                   </div>
 
-                  {!friendIds.has(selectedUser.id) ? (
+                  {!friendIds.has(selectedUser.id) && !hasPendingRequest(selectedUser.id) ? (
                     <Button 
                       className="w-full h-12 rounded-xl text-base font-bold shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-purple-500"
                       onClick={async () => {
                         try {
                           await addFriend.mutateAsync(selectedUser.id);
                           toast({
-                            title: "Friend Added",
-                            description: "They've been added to your connections.",
+                            title: "Request Sent",
+                            description: "Your friend request has been sent.",
                           });
                           setIsDrawerOpen(false);
                         } catch (err: any) {
@@ -310,7 +330,15 @@ export default function FindFriendsPage() {
                       ) : (
                         <UserPlus className="w-5 h-5 mr-2" />
                       )}
-                      Add Friend
+                      Send Friend Request
+                    </Button>
+                  ) : hasPendingRequest(selectedUser.id) ? (
+                    <Button 
+                      className="w-full h-12 rounded-xl text-base font-bold bg-yellow-50 text-yellow-700 border border-yellow-200"
+                      disabled
+                      data-testid="button-pending-drawer"
+                    >
+                      Request Pending
                     </Button>
                   ) : (
                     <Button 
