@@ -25,6 +25,8 @@ export const introRequests = pgTable("intro_requests", {
   viaUserId: varchar("via_user_id").notNull().references(() => users.id),
   message: text("message"),
   status: text("status").notNull().default("pending"),
+  connectorStatus: text("connector_status").notNull().default("pending"),
+  targetStatus: text("target_status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

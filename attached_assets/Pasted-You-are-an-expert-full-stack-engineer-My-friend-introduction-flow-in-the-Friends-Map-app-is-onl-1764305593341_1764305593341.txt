@@ -1,0 +1,57 @@
+You are an expert full-stack engineer.  
+My “friend introduction” flow in the Friends Map app is only half implemented.
+
+Current behavior:
+- I select three people: requester, target, and connector (“via” person).
+- An introduction request is created and delivered ONLY to the connector.
+- The connector sees a card like: “Barak wants to meet Pnina via you” with Approve / Decline.
+- After the connector approves, the map is updated, but the target person (Pnina) NEVER receives any request.
+
+Desired behavior:
+We need TWO stages:
+
+Stage 1 – connector:
+- recipientId = connectorId
+- Card text: "{requesterName} wants to meet {targetName} via you"
+- Status: connectorStatus = "pending" | "approved" | "declined"
+
+Stage 2 – target:
+- When the connector approves, we must create a new request for the target:
+  - recipientId = targetId
+  - requesterId = same requesterId
+  - connectorId = same connectorId
+  - Card text for the TARGET should be:
+    "{requesterName} wants to meet you via {connectorName}"
+  - status fields: targetStatus = "pending" | "approved" | "declined"
+
+Please do the following:
+
+1. In the database model for introductions, make sure we clearly store:
+   - requesterId (who wants to meet)
+   - targetId (who should be met)
+   - connectorId (via whom)
+   - connectorStatus
+   - targetStatus
+   - recipientId (who this specific notification is for)
+
+2. Keep the existing connector request logic (Stage 1), but:
+   - On APPROVE by the connector:
+     - create a second introduction notification whose recipientId = targetId
+     - text: "{requesterName} wants to meet you via {connectorName}"
+     - targetStatus = "pending"
+
+3. Update the “Requests” screen queries:
+   - Received tab: list requests where recipientId == currentUser.id
+   - Sent tab: list requests created by currentUser (connectorId or requesterId), whichever is used in the app.
+
+4. Ensure that:
+   - Aharon1 sees: "Barak wants to meet Pnina via you"
+   - After Aharon1 approves, Pnina sees: "Barak wants to meet you via Aharon1"
+   - The map is updated only after Pnina approves, or at least after both approvals if you prefer.
+
+5. Add console.log statements when:
+   - an introduction is created for the connector
+   - an introduction is created for the target
+   so we can verify the correct recipientId values.
+
+6. Explain what was missing (Stage 2 to the target person) and what you changed.
