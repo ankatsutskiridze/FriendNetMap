@@ -217,25 +217,95 @@ export default function ConnectionsPage() {
 }
 
 function ActivityItem({ item, index, currentUserId }: { item: any; index: number; currentUserId: string }) {
+  /**
+   * Activity Item Subtitle Logic:
+   * The subtitle text depends on two factors:
+   * 1. connection.type - "friend" (direct request) or "introduction" (via connector)
+   * 2. currentUser's perspective - who they are in relation to the request
+   * 
+   * For FRIEND connections (type === "friend"):
+   *   - If currentUser sent the request: "You are now connected with {otherName}"
+   *   - If currentUser received the request: "{otherName} is now connected with you"
+   * 
+   * For INTRODUCTION connections (type === "introduction"):
+   *   - If currentUser is the requester: "You were introduced to {targetName} via {connectorName}"
+   *   - If currentUser is the target: "{requesterName} was introduced to you via {connectorName}"
+   *   - If currentUser is the connector: "You introduced {requesterName} to {targetName}"
+   */
   const isFromMe = item.fromUserId === currentUserId;
   const isToMe = item.toUserId === currentUserId;
   const isViaMe = item.viaUserId === currentUserId;
+  const isFriendRequest = item.type === "friend";
   
   const { data: fromUser } = useUser(item.fromUserId);
   const { data: toUser } = useUser(item.toUserId);
-  const { data: viaUser } = useUser(item.viaUserId);
+  // Only fetch via user for introductions (viaUserId is null for friend requests)
+  const { data: viaUser } = useUser(item.viaUserId || "");
   
   const displayUser = isFromMe ? toUser : fromUser;
   const displayName = displayUser?.fullName || displayUser?.username || "Someone";
-  const viaName = viaUser?.fullName || viaUser?.username || "someone";
+  const fromName = fromUser?.fullName || fromUser?.username || "Someone";
+  const toName = toUser?.fullName || toUser?.username || "Someone";
+  // viaName only used for introductions; default to "someone" if connector data not loaded
+  const viaName = item.viaUserId ? (viaUser?.fullName || viaUser?.username || "someone") : "someone";
   
   let description = "";
-  if (isFromMe) {
-    description = `You requested an intro to ${toUser?.fullName || toUser?.username} via ${viaName}`;
-  } else if (isViaMe) {
-    description = `${fromUser?.fullName || fromUser?.username} wants to meet ${toUser?.fullName || toUser?.username} via you`;
-  } else if (isToMe) {
-    description = `${fromUser?.fullName || fromUser?.username} was introduced to you via ${viaName}`;
+  
+  if (isFriendRequest) {
+    // Direct friend connection - no "via" text
+    if (item.status === "approved") {
+      if (isFromMe) {
+        description = `You are now connected with ${toName}`;
+      } else if (isToMe) {
+        description = `${fromName} is now connected with you`;
+      }
+    } else if (item.status === "pending") {
+      if (isFromMe) {
+        description = `You sent a friend request to ${toName}`;
+      } else if (isToMe) {
+        description = `${fromName} sent you a friend request`;
+      }
+    } else if (item.status === "declined") {
+      if (isFromMe) {
+        description = `Your friend request to ${toName} was declined`;
+      } else if (isToMe) {
+        description = `You declined ${fromName}'s friend request`;
+      }
+    }
+  } else {
+    // Introduction connection - include "via" text with connector name
+    if (item.status === "approved") {
+      if (isFromMe) {
+        description = `You were introduced to ${toName} via ${viaName}`;
+      } else if (isViaMe) {
+        description = `You introduced ${fromName} to ${toName}`;
+      } else if (isToMe) {
+        description = `${fromName} was introduced to you via ${viaName}`;
+      }
+    } else if (item.status === "pending") {
+      if (isFromMe) {
+        description = `You requested an intro to ${toName} via ${viaName}`;
+      } else if (isViaMe) {
+        description = `${fromName} wants to meet ${toName} via you`;
+      } else if (isToMe) {
+        description = `${fromName} wants to be introduced to you via ${viaName}`;
+      }
+    } else if (item.status === "declined") {
+      if (isFromMe) {
+        description = `Your intro request to ${toName} was declined`;
+      } else if (isViaMe) {
+        description = `Introduction between ${fromName} and ${toName} was declined`;
+      } else if (isToMe) {
+        description = `You declined ${fromName}'s intro request`;
+      }
+    }
+  }
+  
+  // Fallback for any unhandled cases
+  if (!description) {
+    description = isFriendRequest 
+      ? `Connection with ${displayName}` 
+      : `Introduction involving ${displayName}`;
   }
   
   return (

@@ -1,0 +1,55 @@
+You are an expert full-stack engineer.  
+My Friends Map app now has two ways to create connections:
+
+1. Direct friend requests (type = "friend")
+2. Introductions via a connector (type = "introduction")
+
+After a friend request is approved, a connection is created and appears on both users’ maps.  
+However, on the **Connections** screen the text is wrong: it always shows messages like:
+- "X was introduced to you via someone"
+- "You requested an intro to Y via someone"
+
+This is incorrect for normal friend connections.  
+I want the UI text on the Connections list to depend on the connection type and on who the current user is.
+
+Please do the following:
+
+1. In the data model, make sure each connection has:
+   - type: "friend" | "introduction"
+   - userAId and userBId (the two people connected)
+   - optional connectorId (only for introductions, null for friends)
+
+2. In the Connections screen component:
+   - When rendering each connection item, determine:
+     - const isFriend = connection.type === "friend"
+     - const isIntro  = connection.type === "introduction"
+     - const isUserA  = connection.userAId === currentUser.id
+     - const otherUser = isUserA ? connection.userB : connection.userA
+
+3. For **friend** connections:
+   - If currentUser is userA or userB, show:
+       title: otherUser.name
+       subtitle:
+         - "You and {otherUser.name} are now connected"
+           OR if you want slightly different variants:
+         - If currentUser sent the original friend request, use:
+             "You are now connected with {otherUser.name}"
+         - If currentUser approved the friend request, use:
+             "{otherUser.name} is now connected with you"
+   - Do NOT mention "via someone" here.
+
+4. For **introduction** connections:
+   - Use the existing copy, but make it more specific using connectorId:
+     - If currentUser is the target:
+         "{requesterName} was introduced to you via {connectorName}"
+     - If currentUser is the requester:
+         "You were introduced to {targetName} via {connectorName}"
+     - Optionally, if currentUser is the connector:
+         "You introduced {requesterName} to {targetName}"
+
+5. Make sure the History / Connections tabs use this new logic, and that:
+   - Friend connections created from friend requests show the new friend text.
+   - Introductions still show the “via” text with the real connector’s name.
+
+6. Add a brief comment in the Connections list component explaining that
+   the subtitle logic depends on connection.type and the perspective of currentUser.
