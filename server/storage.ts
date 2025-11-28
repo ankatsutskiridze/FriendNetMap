@@ -75,23 +75,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addFriend(userId: string, friendId: string): Promise<void> {
+    // Reject self-friendship attempts
+    if (userId === friendId) {
+      throw new Error("Cannot add yourself as a friend");
+    }
+    
     await db.transaction(async (tx: any) => {
-      // Verify both users exist before updating
-      const user1Check = await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
-      const user2Check = await tx.select({ id: users.id }).from(users).where(eq(users.id, friendId)).limit(1);
+      // Sort IDs to ensure consistent lock ordering and prevent deadlocks
+      const [firstId, secondId] = [userId, friendId].sort();
       
-      if (!user1Check[0]) {
-        throw new Error(`User ${userId} not found`);
+      // Lock rows in deterministic order to prevent deadlocks
+      const firstLock = await tx.execute(sql`
+        SELECT id FROM ${users} WHERE id = ${firstId} FOR UPDATE
+      `);
+      const secondLock = await tx.execute(sql`
+        SELECT id FROM ${users} WHERE id = ${secondId} FOR UPDATE
+      `);
+      
+      if (!firstLock.rows || firstLock.rows.length === 0) {
+        throw new Error(`User ${firstId} not found`);
       }
-      if (!user2Check[0]) {
-        throw new Error(`User ${friendId} not found`);
+      if (!secondLock.rows || secondLock.rows.length === 0) {
+        throw new Error(`User ${secondId} not found`);
       }
       
       // Use SQL array operations to atomically add friends only if not present
       // Each CASE WHEN is evaluated atomically within the UPDATE statement
       
       // Add friendId to userId's friends array (only if not already present)
-      await tx.execute(sql`
+      const result1 = await tx.execute(sql`
         UPDATE ${users} 
         SET friends = CASE 
           WHEN ${friendId} = ANY(COALESCE(friends, ARRAY[]::text[])) THEN friends
@@ -101,7 +113,7 @@ export class DatabaseStorage implements IStorage {
       `);
       
       // Add userId to friendId's friends array (only if not already present)
-      await tx.execute(sql`
+      const result2 = await tx.execute(sql`
         UPDATE ${users} 
         SET friends = CASE 
           WHEN ${userId} = ANY(COALESCE(friends, ARRAY[]::text[])) THEN friends
@@ -109,6 +121,11 @@ export class DatabaseStorage implements IStorage {
         END
         WHERE id = ${friendId}
       `);
+      
+      // Verify both updates succeeded
+      if (result1.rowCount === 0 || result2.rowCount === 0) {
+        throw new Error("Failed to update friendship - one or both users may have been deleted");
+      }
     });
   }
 
