@@ -20,7 +20,10 @@ export interface IStorage {
   getIntroRequest(id: string): Promise<IntroRequest | undefined>;
   getIntroRequestsForUser(userId: string): Promise<IntroRequest[]>;
   getIntroRequestsViaUser(viaUserId: string): Promise<IntroRequest[]>;
+  getReceivedIntroRequests(userId: string): Promise<IntroRequest[]>;
   updateIntroRequestStatus(id: string, status: string): Promise<IntroRequest | undefined>;
+  updateIntroRequestConnectorStatus(id: string, status: string): Promise<IntroRequest | undefined>;
+  updateIntroRequestTargetStatus(id: string, status: string): Promise<IntroRequest | undefined>;
   getIntroRequestBetween(fromUserId: string, toUserId: string): Promise<IntroRequest | undefined>;
   getAllIntroRequestsForUser(userId: string): Promise<IntroRequest[]>;
   
@@ -114,6 +117,44 @@ export class DatabaseStorage implements IStorage {
   async getIntroRequestsViaUser(viaUserId: string): Promise<IntroRequest[]> {
     return await db.select().from(introRequests)
       .where(eq(introRequests.viaUserId, viaUserId));
+  }
+
+  async getReceivedIntroRequests(userId: string): Promise<IntroRequest[]> {
+    // Two-stage flow:
+    // Stage 1: User is connector (viaUser) and connectorStatus is pending
+    // Stage 2: User is target (toUser) and connectorStatus is approved but targetStatus is pending
+    return await db.select().from(introRequests)
+      .where(or(
+        // Stage 1: connector needs to approve
+        and(
+          eq(introRequests.viaUserId, userId),
+          eq(introRequests.connectorStatus, "pending")
+        ),
+        // Stage 2: target needs to approve (after connector approved)
+        and(
+          eq(introRequests.toUserId, userId),
+          eq(introRequests.connectorStatus, "approved"),
+          eq(introRequests.targetStatus, "pending")
+        )
+      ));
+  }
+
+  async updateIntroRequestConnectorStatus(id: string, status: string): Promise<IntroRequest | undefined> {
+    const result = await db.update(introRequests)
+      .set({ connectorStatus: status })
+      .where(eq(introRequests.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async updateIntroRequestTargetStatus(id: string, status: string): Promise<IntroRequest | undefined> {
+    // When target approves, also update the overall status
+    const overallStatus = status === "approved" ? "approved" : (status === "declined" ? "declined" : "pending");
+    const result = await db.update(introRequests)
+      .set({ targetStatus: status, status: overallStatus })
+      .where(eq(introRequests.id, id))
+      .returning();
+    return result[0];
   }
 
   async updateIntroRequestStatus(id: string, status: string): Promise<IntroRequest | undefined> {

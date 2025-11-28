@@ -287,11 +287,13 @@ export async function registerRoutes(
 
   app.get("/api/intro-requests/received", requireAuth, async (req: any, res) => {
     try {
-      // Get requests where I am the VIA user (connector) - I need to approve these
-      const requests = await storage.getIntroRequestsViaUser(req.user.id);
+      // Two-stage flow: 
+      // Stage 1: I am the connector (viaUser) and connectorStatus is pending
+      // Stage 2: I am the target (toUser) and connectorStatus is approved but targetStatus is pending
+      const requests = await storage.getReceivedIntroRequests(req.user.id);
       console.log(`[intro-requests/received] User ${req.user.id} has ${requests.length} received requests`);
       requests.forEach(r => {
-        console.log(`  - Request ${r.id}: from=${r.fromUserId}, to=${r.toUserId}, via=${r.viaUserId}, status=${r.status}`);
+        console.log(`  - Request ${r.id}: from=${r.fromUserId}, to=${r.toUserId}, via=${r.viaUserId}, connectorStatus=${r.connectorStatus}, targetStatus=${r.targetStatus}`);
       });
       res.json(requests);
     } catch (err: any) {
@@ -306,18 +308,44 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Request not found" });
       }
       
-      // Only the via user can approve
-      if (request.viaUserId !== req.user.id) {
-        return res.status(403).json({ message: "Forbidden" });
+      const currentUserId = req.user.id;
+      
+      // Stage 1: Connector (viaUser) approves
+      if (request.viaUserId === currentUserId && request.connectorStatus === "pending") {
+        console.log(`[STAGE 1 APPROVAL] Connector ${currentUserId} approved request ${request.id}`);
+        console.log(`  Request: ${request.fromUserId} wants to meet ${request.toUserId} via ${request.viaUserId}`);
+        
+        // Update connectorStatus to approved, targetStatus stays pending
+        const updated = await storage.updateIntroRequestConnectorStatus(request.id, "approved");
+        
+        console.log(`[STAGE 2 CREATED] Target ${request.toUserId} will now see this request in their Received tab`);
+        
+        res.json(updated);
+        return;
       }
       
-      // Update status to approved
-      const updated = await storage.updateIntroRequestStatus(req.params.id, "approved");
+      // Stage 2: Target (toUser) approves
+      if (request.toUserId === currentUserId && request.connectorStatus === "approved" && request.targetStatus === "pending") {
+        console.log(`[STAGE 2 APPROVAL] Target ${currentUserId} approved request ${request.id}`);
+        console.log(`  Request: ${request.fromUserId} wants to meet ${request.toUserId} via ${request.viaUserId}`);
+        
+        // Update targetStatus to approved and overall status
+        const updated = await storage.updateIntroRequestTargetStatus(request.id, "approved");
+        
+        // Now add fromUserId and toUserId as friends
+        await storage.addFriend(request.fromUserId, request.toUserId);
+        
+        console.log(`[FRIENDS ADDED] ${request.fromUserId} and ${request.toUserId} are now friends!`);
+        
+        res.json(updated);
+        return;
+      }
       
-      // Add fromUserId and toUserId as friends
-      await storage.addFriend(request.fromUserId, request.toUserId);
-      
-      res.json(updated);
+      // User is not authorized to approve this request at this stage
+      console.log(`[APPROVAL DENIED] User ${currentUserId} cannot approve request ${request.id}`);
+      console.log(`  viaUserId=${request.viaUserId}, toUserId=${request.toUserId}`);
+      console.log(`  connectorStatus=${request.connectorStatus}, targetStatus=${request.targetStatus}`);
+      return res.status(403).json({ message: "Forbidden - not authorized to approve at this stage" });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -330,13 +358,27 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Request not found" });
       }
       
-      // Only the via user can decline
-      if (request.viaUserId !== req.user.id) {
-        return res.status(403).json({ message: "Forbidden" });
+      const currentUserId = req.user.id;
+      
+      // Stage 1: Connector (viaUser) declines
+      if (request.viaUserId === currentUserId && request.connectorStatus === "pending") {
+        console.log(`[STAGE 1 DECLINE] Connector ${currentUserId} declined request ${request.id}`);
+        const updated = await storage.updateIntroRequestConnectorStatus(request.id, "declined");
+        res.json(updated);
+        return;
       }
       
-      const updated = await storage.updateIntroRequestStatus(req.params.id, "declined");
-      res.json(updated);
+      // Stage 2: Target (toUser) declines
+      if (request.toUserId === currentUserId && request.connectorStatus === "approved" && request.targetStatus === "pending") {
+        console.log(`[STAGE 2 DECLINE] Target ${currentUserId} declined request ${request.id}`);
+        const updated = await storage.updateIntroRequestTargetStatus(request.id, "declined");
+        res.json(updated);
+        return;
+      }
+      
+      // User is not authorized to decline this request at this stage
+      console.log(`[DECLINE DENIED] User ${currentUserId} cannot decline request ${request.id}`);
+      return res.status(403).json({ message: "Forbidden - not authorized to decline at this stage" });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }

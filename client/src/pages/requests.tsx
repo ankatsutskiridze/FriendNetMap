@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { Drawer } from "vaul";
-import { useIntroRequestsReceived, useIntroRequestsSent, useUser, useApproveIntroRequest, useDeclineIntroRequest } from "@/lib/api";
+import { useIntroRequestsReceived, useIntroRequestsSent, useUser, useApproveIntroRequest, useDeclineIntroRequest, useCurrentUser } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 
 import imgWoman from "@assets/generated_images/friendly_young_woman_avatar.png";
@@ -59,12 +59,38 @@ export default function RequestsPage() {
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
+  const { data: currentUser } = useCurrentUser();
   const { data: receivedRequests = [], isLoading: receivedLoading } = useIntroRequestsReceived();
   const { data: sentRequests = [], isLoading: sentLoading } = useIntroRequestsSent();
   const approveRequest = useApproveIntroRequest();
   const declineRequest = useDeclineIntroRequest();
 
-  const isLoading = receivedLoading || sentLoading;
+  const isLoading = receivedLoading || sentLoading || !currentUser;
+
+  // Determine if user is connector or target for each received request
+  const getReceivedRequestRole = (req: any) => {
+    if (!currentUser) return null;
+    
+    console.log(`[getReceivedRequestRole] Request ${req.id}:`, {
+      viaUserId: req.viaUserId,
+      toUserId: req.toUserId,
+      currentUserId: currentUser.id,
+      connectorStatus: req.connectorStatus,
+      targetStatus: req.targetStatus,
+      status: req.status
+    });
+    
+    if (req.viaUserId === currentUser.id && req.connectorStatus === "pending") {
+      console.log(`[getReceivedRequestRole] Returning "connector" for request ${req.id}`);
+      return "connector"; // Stage 1: user is the connector
+    }
+    if (req.toUserId === currentUser.id && req.connectorStatus === "approved" && req.targetStatus === "pending") {
+      console.log(`[getReceivedRequestRole] Returning "target" for request ${req.id}`);
+      return "target"; // Stage 2: user is the target
+    }
+    console.log(`[getReceivedRequestRole] Returning null for request ${req.id}`);
+    return null;
+  };
 
   const handleApprove = async (requestId: string) => {
     setProcessingId(requestId);
@@ -126,7 +152,7 @@ export default function RequestsPage() {
             )}
             data-testid="tab-received"
           >
-            Received ({receivedRequests.filter(r => r.status === "pending").length})
+            Received ({receivedRequests.length})
             {activeTab === "received" && (
               <motion.div
                 layoutId="activeTab"
@@ -162,7 +188,11 @@ export default function RequestsPage() {
               className="space-y-4"
             >
               {receivedRequests.length > 0 ? (
-                receivedRequests.map((req, index) => (
+                receivedRequests.map((req, index) => {
+                  const role = getReceivedRequestRole(req);
+                  const isPending = role !== null; // Request is pending if user has a role
+                  
+                  return (
                   <motion.div
                     key={req.id}
                     layout
@@ -172,7 +202,7 @@ export default function RequestsPage() {
                     className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 overflow-hidden"
                     data-testid={`request-received-${req.id}`}
                   >
-                    {req.status === "pending" ? (
+                    {isPending ? (
                       <>
                         <div className="flex items-start gap-3 mb-3">
                           <UserAvatar userId={req.fromUserId} index={index} />
@@ -182,7 +212,11 @@ export default function RequestsPage() {
                               <span className="text-xs text-muted-foreground">{formatTimeAgo(req.createdAt)}</span>
                             </div>
                             <p className="text-sm text-muted-foreground mt-0.5">
-                              Wants to meet <UserDisplay userId={req.toUserId} fallbackImage="" /> via you
+                              {role === "connector" ? (
+                                <>Wants to meet <UserDisplay userId={req.toUserId} fallbackImage="" /> via you</>
+                              ) : (
+                                <>Wants to meet you via <UserDisplay userId={req.viaUserId} fallbackImage="" /></>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -207,7 +241,7 @@ export default function RequestsPage() {
                               ) : (
                                 <>
                                   <Check className="w-4 h-4 mr-2" />
-                                  Approve
+                                  {role === "connector" ? "Introduce" : "Accept"}
                                 </>
                               )}
                             </Button>
@@ -234,7 +268,8 @@ export default function RequestsPage() {
                       />
                     )}
                   </motion.div>
-                ))
+                  );
+                })
               ) : (
                 <EmptyState title="No requests yet" subtitle="When friends ask for introductions, they'll appear here." image={emptyInboxImg} />
               )}
