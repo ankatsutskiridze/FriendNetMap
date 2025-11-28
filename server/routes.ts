@@ -243,8 +243,12 @@ export async function registerRoutes(
     try {
       const parsed = insertIntroRequestSchema.parse(req.body);
       
+      console.log(`[intro-requests/create] Current user: ${req.user.id}`);
+      console.log(`[intro-requests/create] Creating request: from=${parsed.fromUserId}, to=${parsed.toUserId}, via=${parsed.viaUserId}`);
+      
       // Verify the from user is the current user
       if (parsed.fromUserId !== req.user.id) {
+        console.log(`[intro-requests/create] ERROR: fromUserId (${parsed.fromUserId}) !== currentUser (${req.user.id})`);
         return res.status(403).json({ message: "Forbidden" });
       }
       
@@ -258,8 +262,11 @@ export async function registerRoutes(
       }
       
       const request = await storage.createIntroRequest(parsed);
+      console.log(`[intro-requests/create] Request created successfully: ${request.id}`);
+      console.log(`[intro-requests/create] The VIA user (${parsed.viaUserId}) will see this in their Received tab`);
       res.json(request);
     } catch (err: any) {
+      console.error(`[intro-requests/create] Error: ${err.message}`);
       res.status(400).json({ message: err.message });
     }
   });
@@ -268,6 +275,10 @@ export async function registerRoutes(
     try {
       const requests = await storage.getIntroRequestsForUser(req.user.id);
       const sent = requests.filter((r) => r.fromUserId === req.user.id);
+      console.log(`[intro-requests/sent] User ${req.user.id} has ${sent.length} sent requests`);
+      sent.forEach(r => {
+        console.log(`  - Request ${r.id}: from=${r.fromUserId}, to=${r.toUserId}, via=${r.viaUserId}, status=${r.status}`);
+      });
       res.json(sent);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -276,7 +287,12 @@ export async function registerRoutes(
 
   app.get("/api/intro-requests/received", requireAuth, async (req: any, res) => {
     try {
+      // Get requests where I am the VIA user (connector) - I need to approve these
       const requests = await storage.getIntroRequestsViaUser(req.user.id);
+      console.log(`[intro-requests/received] User ${req.user.id} has ${requests.length} received requests`);
+      requests.forEach(r => {
+        console.log(`  - Request ${r.id}: from=${r.fromUserId}, to=${r.toUserId}, via=${r.viaUserId}, status=${r.status}`);
+      });
       res.json(requests);
     } catch (err: any) {
       res.status(500).json({ message: err.message });

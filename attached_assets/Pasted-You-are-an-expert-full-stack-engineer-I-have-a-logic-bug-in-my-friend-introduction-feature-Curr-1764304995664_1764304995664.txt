@@ -1,0 +1,47 @@
+You are an expert full-stack engineer. I have a logic bug in my “friend introduction” feature.
+
+Current behavior:
+- When I send an introduction like:
+  "Lior wants to meet Pnina via you"
+  the request appears in the inbox (Received tab) of the person who created the introduction,
+  instead of the person who is supposed to receive/approve it.
+
+Desired behavior:
+- The introduction request should be delivered to the correct target person, not the introducer.
+- Example:
+  I (the connector) choose:
+    requester = Lior
+    target = Pnina
+  The introduction card should show: "Lior wants to meet Pnina via you"
+  and the **request should appear in Pnina’s Received tab**, not in my own.
+
+Please do the following:
+
+1. Find the code that creates/saves an introduction request in the database.
+   It probably has fields like: senderId, recipientId, userId, fromUserId, toUserId, connectorId, etc.
+
+2. Add clear names for the three roles:
+   - connectorId (the user who initiates the introduction – the “via you” person)
+   - requesterId (the friend who wants to meet someone)
+   - targetId (the friend who should receive the introduction and approve/decline)
+
+3. Fix the logic when creating the request so that:
+   - connectorId = current logged-in user
+   - requesterId = the friend selected as “wants to meet”
+   - targetId = the friend selected as “via you” (the person who must approve)
+   Do NOT set recipientId/targetId to the current user unless the current user is actually the target.
+
+4. Update the queries for the Requests screen:
+   - Received tab should show requests where targetId == currentUser.id
+   - Sent tab should show requests where connectorId == currentUser.id
+   (or requesterId, depending on the UX you prefer, but it must be consistent).
+
+5. Make sure the UI text still renders correctly:
+   - “[requesterName] wants to meet [targetName] via you”
+   using the three fields (connectorId, requesterId, targetId).
+
+6. Add some console.log/debug logs to verify:
+   - which IDs are stored when an introduction is created
+   - which IDs are used to filter Received and Sent lists.
+
+7. Explain what was wrong (recipient was set to the connector/current user) and exactly how you fixed it.
