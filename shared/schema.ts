@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   instagramHandle: text("instagram_handle"),
   whatsappNumber: text("whatsapp_number"),
   phoneNumber: text("phone_number"),
+  facebookHandle: text("facebook_handle"),
   friends: text("friends").array().default(sql`ARRAY[]::text[]`),
   createdAt: timestamp("created_at").defaultNow(),
 });

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Camera, Instagram, MessageCircle, Phone, Loader2 } from "lucide-react";
+import { ChevronLeft, Camera, Instagram, MessageCircle, Facebook, Loader2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@ export default function EditProfilePage() {
     about: "",
     instagramHandle: "",
     whatsappNumber: "",
-    phoneNumber: ""
+    facebookHandle: ""
   });
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function EditProfilePage() {
         about: currentUser.about || "",
         instagramHandle: currentUser.instagramHandle || "",
         whatsappNumber: currentUser.whatsappNumber || "",
-        phoneNumber: currentUser.phoneNumber || ""
+        facebookHandle: currentUser.facebookHandle || ""
       });
     }
   }, [currentUser]);
@@ -183,16 +183,16 @@ export default function EditProfilePage() {
 
             <div className="p-4 flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
-                <Phone className="w-5 h-5 text-blue-600" />
+                <Facebook className="w-5 h-5 text-blue-600" />
               </div>
               <div className="flex-1">
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Phone</label>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Facebook</label>
                 <Input 
-                  value={formData.phoneNumber}
-                  onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                  value={formData.facebookHandle}
+                  onChange={(e) => setFormData({...formData, facebookHandle: e.target.value})}
                   className="h-8 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40 text-sm font-medium"
-                  placeholder="+1 234 567 8900"
-                  data-testid="input-phone"
+                  placeholder="facebook.com/username"
+                  data-testid="input-facebook"
                 />
               </div>
             </div>

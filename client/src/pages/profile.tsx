@@ -3,7 +3,7 @@ import {
   ChevronLeft, 
   Instagram, 
   MessageCircle, 
-  Phone,
+  Facebook,
   ChevronRight, 
   Plus, 
   Settings, 
@@ -174,9 +174,9 @@ export default function ProfilePage() {
               isOwn={isOwnProfile}
             />
             <SocialRow 
-              icon={<Phone className="w-5 h-5 text-blue-600" />}
-              label="Phone"
-              value={user.phoneNumber}
+              icon={<Facebook className="w-5 h-5 text-blue-600" />}
+              label="Facebook"
+              value={user.facebookHandle}
               isOwn={isOwnProfile}
             />
           </div>
