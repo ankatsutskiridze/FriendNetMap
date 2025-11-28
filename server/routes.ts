@@ -142,6 +142,7 @@ export async function registerRoutes(
   });
 
   // Search users - MUST be before /api/users/:id to avoid route conflict
+  // NOTE: This route searches the users table directly and is independent of the friend request schema
   app.get("/api/users/search", requireAuth, async (req: any, res) => {
     try {
       const query = (req.query.q as string) || "";
@@ -151,7 +152,9 @@ export async function registerRoutes(
       const usersWithoutPasswords = users.map(({ password, ...user }) => user);
       res.json(usersWithoutPasswords);
     } catch (err: any) {
-      console.error(`[search] Database error:`, err);
+      // Log the full error for debugging - search should work independently of friend request schema
+      console.error(`[search] Database error for query "${req.query.q}":`, err.message);
+      console.error(`[search] Full error:`, err);
       res.status(500).json({ message: err.message });
     }
   });

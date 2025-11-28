@@ -238,25 +238,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchUsers(query: string, excludeUserId?: string): Promise<User[]> {
-    if (!query.trim()) {
-      if (excludeUserId) {
-        return await db.select().from(users).where(ne(users.id, excludeUserId)).limit(20);
+    // NOTE: This function searches the users table directly.
+    // It is INDEPENDENT of the intro_requests / friend request schema.
+    // If this fails, check database connection, not request tables.
+    try {
+      if (!query.trim()) {
+        if (excludeUserId) {
+          return await db.select().from(users).where(ne(users.id, excludeUserId)).limit(20);
+        }
+        return await db.select().from(users).limit(20);
       }
-      return await db.select().from(users).limit(20);
+      
+      const searchPattern = `%${query}%`;
+      let results = await db.select().from(users)
+        .where(or(
+          ilike(users.fullName, searchPattern),
+          ilike(users.username, searchPattern)
+        ))
+        .limit(20);
+      
+      if (excludeUserId) {
+        results = results.filter(u => u.id !== excludeUserId);
+      }
+      return results;
+    } catch (error: any) {
+      console.error("[storage.searchUsers] Error searching users:", error.message);
+      // Re-throw to let the route handler return the error
+      throw error;
     }
-    
-    const searchPattern = `%${query}%`;
-    let results = await db.select().from(users)
-      .where(or(
-        ilike(users.fullName, searchPattern),
-        ilike(users.username, searchPattern)
-      ))
-      .limit(20);
-    
-    if (excludeUserId) {
-      results = results.filter(u => u.id !== excludeUserId);
-    }
-    return results;
   }
 
   // Settings methods

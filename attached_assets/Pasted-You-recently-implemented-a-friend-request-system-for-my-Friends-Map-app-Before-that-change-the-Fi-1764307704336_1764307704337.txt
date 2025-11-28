@@ -1,0 +1,39 @@
+You recently implemented a friend request system for my Friends Map app.
+Before that change, the "Find Friends" page worked and showed a list of users.
+Now the page always shows: "Unable to search. Please try again."
+This means the search API (or its DB query) is throwing an error in the try/catch.
+
+Please debug and fix ONLY the search / find-friends functionality.
+
+1. Locate the frontend code for the Find Friends screen:
+   - Find the function that calls the backend to search users.
+   - Confirm what endpoint it calls (for example: /api/users/search or /api/friends/search) and what request body/query it sends.
+
+2. Locate the backend route or handler for that endpoint.
+   - It should query the users table (profiles), NOT the requests or friendRequests table.
+   - Because we recently changed the schema for requests, the query might now be failing or pointing to the wrong model.
+
+3. Add temporary console.error logging inside the try/catch of the search handler to print:
+   - the incoming query text
+   - the exact error message from the database / ORM
+
+4. Fix the handler so that:
+   - It successfully reads from the correct users table/model.
+   - It does NOT depend on the new friend request schema to work.
+   - It returns a JSON response like:
+       { success: true, users: [...] }
+     with an empty array when there are no matches – NOT an exception.
+
+   The search should do a simple case-insensitive "contains" match on the user's name/displayName for the provided search text.
+
+5. Update the frontend Find Friends screen so that:
+   - When the API returns success with users, it renders the list of users.
+   - When the API returns success with an empty array, it shows a "No users found" message.
+   - It only shows "Unable to search. Please try again." when the fetch actually fails (network or thrown error).
+
+6. After fixing, manually test:
+   - Open /find-friends, type a few characters of existing users’ names.
+   - Verify that the list appears again and the Add / Pending buttons still work.
+   - Confirm that the new friend request system is not broken by these changes.
+
+7. Finally, leave a short comment in the search handler explaining what was wrong (the error after the schema change) and how you fixed it.
