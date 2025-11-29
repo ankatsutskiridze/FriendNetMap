@@ -3,8 +3,11 @@ import type { User, IntroRequest, UserSettings } from "@shared/schema";
 
 type UserWithoutPassword = Omit<User, "password">;
 
+const BASE_URL = import.meta.env.VITE_API_URL || "";
+
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
+  const fullUrl = url.startsWith("/") ? BASE_URL + url : url;
+  const res = await fetch(fullUrl, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -34,7 +37,15 @@ export function useFriends() {
 }
 
 export function useFriendsOfFriends() {
-  return useQuery<(UserWithoutPassword & { mutualFriends: { id: string; fullName: string; photoURL: string | null }[] })[]>({
+  return useQuery<
+    (UserWithoutPassword & {
+      mutualFriends: {
+        id: string;
+        fullName: string;
+        photoURL: string | null;
+      }[];
+    })[]
+  >({
     queryKey: ["friendsOfFriends"],
     queryFn: () => fetchJson("/api/friends/fof"),
   });
@@ -51,7 +62,8 @@ export function useUser(userId: string) {
 export function useSearchUsers(query: string, enabled: boolean = true) {
   return useQuery<UserWithoutPassword[]>({
     queryKey: ["searchUsers", query],
-    queryFn: () => fetchJson(`/api/users/search?q=${encodeURIComponent(query)}`),
+    queryFn: () =>
+      fetchJson(`/api/users/search?q=${encodeURIComponent(query)}`),
     enabled: enabled,
     retry: false,
   });
@@ -112,7 +124,9 @@ export function useSentFriendRequests() {
   return useQuery<IntroRequest[]>({
     queryKey: ["sentFriendRequests"],
     queryFn: async () => {
-      const requests = await fetchJson<IntroRequest[]>("/api/intro-requests/sent");
+      const requests = await fetchJson<IntroRequest[]>(
+        "/api/intro-requests/sent"
+      );
       return requests.filter((r: IntroRequest) => r.type === "friend");
     },
   });
@@ -122,8 +136,12 @@ export function useReceivedFriendRequests() {
   return useQuery<IntroRequest[]>({
     queryKey: ["receivedFriendRequests"],
     queryFn: async () => {
-      const requests = await fetchJson<IntroRequest[]>("/api/intro-requests/received");
-      return requests.filter((r: IntroRequest) => r.type === "friend" && r.status === "pending");
+      const requests = await fetchJson<IntroRequest[]>(
+        "/api/intro-requests/received"
+      );
+      return requests.filter(
+        (r: IntroRequest) => r.type === "friend" && r.status === "pending"
+      );
     },
   });
 }
@@ -165,7 +183,12 @@ export function useDeleteAccount() {
 export function useCreateIntroRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { fromUserId: string; toUserId: string; viaUserId: string; message?: string }) =>
+    mutationFn: (data: {
+      fromUserId: string;
+      toUserId: string;
+      viaUserId: string;
+      message?: string;
+    }) =>
       fetchJson("/api/intro-requests", {
         method: "POST",
         body: JSON.stringify(data),
@@ -181,7 +204,9 @@ export function useApproveIntroRequest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (requestId: string) =>
-      fetchJson(`/api/intro-requests/${requestId}/approve`, { method: "PATCH" }),
+      fetchJson(`/api/intro-requests/${requestId}/approve`, {
+        method: "PATCH",
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["introRequests"] });
       queryClient.invalidateQueries({ queryKey: ["friends"] });
@@ -196,7 +221,9 @@ export function useDeclineIntroRequest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (requestId: string) =>
-      fetchJson(`/api/intro-requests/${requestId}/decline`, { method: "PATCH" }),
+      fetchJson(`/api/intro-requests/${requestId}/decline`, {
+        method: "PATCH",
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["introRequests"] });
       queryClient.invalidateQueries({ queryKey: ["activity"] });

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -17,10 +18,41 @@ app.use(
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
-  }),
+  })
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// CORS Middleware
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    process.env.CLIENT_ORIGIN,
+    "http://localhost:5000",
+    "http://localhost:5173",
+  ];
+  const origin = req.headers.origin;
+  if (
+    origin &&
+    (allowedOrigins.includes(origin) ||
+      !process.env.NODE_ENV ||
+      process.env.NODE_ENV === "development")
+  ) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+  );
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.header("Access-Control-Allow-Credentials", "true");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -89,10 +121,10 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);
-    },
+      log(`App is running at http://localhost:${port}`);
+    }
   );
 })();
