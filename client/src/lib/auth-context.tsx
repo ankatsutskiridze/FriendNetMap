@@ -7,6 +7,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
+  loginWithFirebase: (token: string) => Promise<void>;
   register: (data: { username: string; password: string; fullName: string }) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: AuthUser) => void;
@@ -52,6 +53,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   };
 
+  const loginWithFirebase = async (token: string) => {
+    const response = await fetch("/api/auth/firebase", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message);
+    }
+
+    const userData = await response.json();
+    setUser(userData);
+  };
+
   const register = async (data: { username: string; password: string; fullName: string }) => {
     const response = await fetch("/api/auth/register", {
       method: "POST",
@@ -78,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithFirebase, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,10 +1,16 @@
 import type { Express } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
+import { verifyIdToken } from "./firebase";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { insertUserSchema, insertIntroRequestSchema, updateUserSchema, updateSettingsSchema } from "@shared/schema";
+import {
+  insertUserSchema,
+  insertIntroRequestSchema,
+  updateUserSchema,
+  updateSettingsSchema,
+} from "@shared/schema";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 
@@ -18,7 +24,7 @@ async function hashPassword(password: string): Promise<string> {
 
 async function comparePassword(
   supplied: string,
-  stored: string,
+  stored: string
 ): Promise<boolean> {
   const [hashedPassword, salt] = stored.split(".");
   const hashedSupplied = (await scryptAsync(supplied, salt, 64)) as Buffer;
@@ -125,6 +131,71 @@ export async function registerRoutes(
     });
   });
 
+  app.post("/api/auth/firebase", async (req, res, next) => {
+    try {
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ message: "Token is required" });
+      }
+
+      const decodedToken = await verifyIdToken(token);
+      const { uid, email, name, picture } = decodedToken;
+
+      // Check if user exists by firebaseUid
+      let user = await storage.getUserByFirebaseUid(uid);
+
+      if (!user) {
+        // Check if user exists by email
+        if (email) {
+          user = await storage.getUserByEmail(email);
+          if (user) {
+            // Link existing user to Firebase
+            user = await storage.updateUser(user.id, { firebaseUid: uid });
+          }
+        }
+
+        if (!user) {
+          // Create new user
+          // We need a username. Let's generate one from email or name or random.
+          let username = email
+            ? email.split("@")[0]
+            : `user_${uid.substring(0, 8)}`;
+
+          // Ensure username is unique (simple retry or check)
+          let existingUsername = await storage.getUserByUsername(username);
+          if (existingUsername) {
+            username = `${username}_${Math.floor(Math.random() * 1000)}`;
+          }
+
+          user = await storage.createUser({
+            username,
+            email: email || undefined,
+            firebaseUid: uid,
+            fullName: name || "New User",
+            photoURL: picture,
+            password: null, // No password for social login
+          });
+        }
+      }
+
+      if (!user) {
+        return res
+          .status(500)
+          .json({ message: "Failed to create or retrieve user" });
+      }
+
+      // Log the user in using Passport
+      req.login(user, (err) => {
+        if (err) return next(err);
+        const { password, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
+    } catch (err: any) {
+      console.error("Firebase auth error:", err);
+      res.status(401).json({ message: "Invalid token" });
+    }
+  });
+
   app.get("/api/auth/me", requireAuth, (req: any, res) => {
     const { password, ...userWithoutPassword } = req.user;
     res.json(userWithoutPassword);
@@ -148,12 +219,17 @@ export async function registerRoutes(
       const query = (req.query.q as string) || "";
       console.log(`[search] Query: "${query}", User ID: ${req.user.id}`);
       const users = await storage.searchUsers(query, req.user.id);
-      console.log(`[search] Found ${users.length} results for query "${query}"`);
+      console.log(
+        `[search] Found ${users.length} results for query "${query}"`
+      );
       const usersWithoutPasswords = users.map(({ password, ...user }) => user);
       res.json(usersWithoutPasswords);
     } catch (err: any) {
       // Log the full error for debugging - search should work independently of friend request schema
-      console.error(`[search] Database error for query "${req.query.q}":`, err.message);
+      console.error(
+        `[search] Database error for query "${req.query.q}":`,
+        err.message
+      );
       console.error(`[search] Full error:`, err);
       res.status(500).json({ message: err.message });
     }
@@ -198,38 +274,44 @@ export async function registerRoutes(
     try {
       const friendId = req.params.friendId;
       const userId = req.user.id;
-      
+
       if (userId === friendId) {
-        return res.status(400).json({ message: "Cannot add yourself as a friend" });
+        return res
+          .status(400)
+          .json({ message: "Cannot add yourself as a friend" });
       }
-      
+
       const friend = await storage.getUser(friendId);
       if (!friend) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Check if they're already friends
       const currentUser = await storage.getUser(userId);
       if (currentUser?.friends?.includes(friendId)) {
         return res.status(400).json({ message: "Already friends" });
       }
-      
+
       // Check if a friend request already exists
       const existing = await storage.getFriendRequestBetween(userId, friendId);
       if (existing) {
         if (existing.status === "pending") {
-          return res.status(400).json({ message: "Friend request already pending" });
+          return res
+            .status(400)
+            .json({ message: "Friend request already pending" });
         }
         if (existing.status === "approved") {
           return res.status(400).json({ message: "Already friends" });
         }
       }
-      
+
       // Create a friend request instead of direct connection
-      console.log(`[friend-request/create] User ${userId} sending friend request to ${friendId}`);
+      console.log(
+        `[friend-request/create] User ${userId} sending friend request to ${friendId}`
+      );
       const request = await storage.createFriendRequest(userId, friendId);
       console.log(`[friend-request/create] Request created: ${request.id}`);
-      
+
       res.json({ message: "Friend request sent", request });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -240,7 +322,7 @@ export async function registerRoutes(
     try {
       const friendId = req.params.friendId;
       const userId = req.user.id;
-      
+
       await storage.removeFriend(userId, friendId);
       res.json({ message: "Friend removed successfully" });
     } catch (err: any) {
@@ -255,7 +337,9 @@ export async function registerRoutes(
         return res.json([]);
       }
       const friends = await storage.getUsersByIds(user.friends);
-      const friendsWithoutPasswords = friends.map(({ password, ...friend }) => friend);
+      const friendsWithoutPasswords = friends.map(
+        ({ password, ...friend }) => friend
+      );
       res.json(friendsWithoutPasswords);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -266,16 +350,20 @@ export async function registerRoutes(
   app.post("/api/intro-requests", requireAuth, async (req: any, res) => {
     try {
       const parsed = insertIntroRequestSchema.parse(req.body);
-      
+
       console.log(`[intro-requests/create] Current user: ${req.user.id}`);
-      console.log(`[intro-requests/create] Creating request: from=${parsed.fromUserId}, to=${parsed.toUserId}, via=${parsed.viaUserId}`);
-      
+      console.log(
+        `[intro-requests/create] Creating request: from=${parsed.fromUserId}, to=${parsed.toUserId}, via=${parsed.viaUserId}`
+      );
+
       // Verify the from user is the current user
       if (parsed.fromUserId !== req.user.id) {
-        console.log(`[intro-requests/create] ERROR: fromUserId (${parsed.fromUserId}) !== currentUser (${req.user.id})`);
+        console.log(
+          `[intro-requests/create] ERROR: fromUserId (${parsed.fromUserId}) !== currentUser (${req.user.id})`
+        );
         return res.status(403).json({ message: "Forbidden" });
       }
-      
+
       // Check if request already exists
       const existing = await storage.getIntroRequestBetween(
         parsed.fromUserId,
@@ -284,10 +372,14 @@ export async function registerRoutes(
       if (existing) {
         return res.status(400).json({ message: "Request already exists" });
       }
-      
+
       const request = await storage.createIntroRequest(parsed);
-      console.log(`[intro-requests/create] Request created successfully: ${request.id}`);
-      console.log(`[intro-requests/create] The VIA user (${parsed.viaUserId}) will see this in their Received tab`);
+      console.log(
+        `[intro-requests/create] Request created successfully: ${request.id}`
+      );
+      console.log(
+        `[intro-requests/create] The VIA user (${parsed.viaUserId}) will see this in their Received tab`
+      );
       res.json(request);
     } catch (err: any) {
       console.error(`[intro-requests/create] Error: ${err.message}`);
@@ -299,9 +391,13 @@ export async function registerRoutes(
     try {
       const requests = await storage.getIntroRequestsForUser(req.user.id);
       const sent = requests.filter((r) => r.fromUserId === req.user.id);
-      console.log(`[intro-requests/sent] User ${req.user.id} has ${sent.length} sent requests`);
-      sent.forEach(r => {
-        console.log(`  - Request ${r.id}: from=${r.fromUserId}, to=${r.toUserId}, via=${r.viaUserId}, status=${r.status}`);
+      console.log(
+        `[intro-requests/sent] User ${req.user.id} has ${sent.length} sent requests`
+      );
+      sent.forEach((r) => {
+        console.log(
+          `  - Request ${r.id}: from=${r.fromUserId}, to=${r.toUserId}, via=${r.viaUserId}, status=${r.status}`
+        );
       });
       res.json(sent);
     } catch (err: any) {
@@ -309,145 +405,243 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/intro-requests/received", requireAuth, async (req: any, res) => {
-    try {
-      // Get all received requests (both friend and introduction)
-      const requests = await storage.getAllReceivedRequests(req.user.id);
-      console.log(`[intro-requests/received] User ${req.user.id} has ${requests.length} received requests`);
-      requests.forEach(r => {
-        console.log(`  - Request ${r.id}: type=${r.type}, from=${r.fromUserId}, to=${r.toUserId}, via=${r.viaUserId}, status=${r.status}, connectorStatus=${r.connectorStatus}, targetStatus=${r.targetStatus}`);
-      });
-      res.json(requests);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
+  app.get(
+    "/api/intro-requests/received",
+    requireAuth,
+    async (req: any, res) => {
+      try {
+        // Get all received requests (both friend and introduction)
+        const requests = await storage.getAllReceivedRequests(req.user.id);
+        console.log(
+          `[intro-requests/received] User ${req.user.id} has ${requests.length} received requests`
+        );
+        requests.forEach((r) => {
+          console.log(
+            `  - Request ${r.id}: type=${r.type}, from=${r.fromUserId}, to=${r.toUserId}, via=${r.viaUserId}, status=${r.status}, connectorStatus=${r.connectorStatus}, targetStatus=${r.targetStatus}`
+          );
+        });
+        res.json(requests);
+      } catch (err: any) {
+        res.status(500).json({ message: err.message });
+      }
     }
-  });
+  );
 
-  app.patch("/api/intro-requests/:id/approve", requireAuth, async (req: any, res) => {
-    try {
-      const request = await storage.getIntroRequest(req.params.id);
-      if (!request) {
-        return res.status(404).json({ message: "Request not found" });
-      }
-      
-      const currentUserId = req.user.id;
-      
-      // Handle FRIEND requests
-      if (request.type === "friend") {
-        if (request.toUserId !== currentUserId) {
-          return res.status(403).json({ message: "Forbidden - not authorized to approve this request" });
+  app.patch(
+    "/api/intro-requests/:id/approve",
+    requireAuth,
+    async (req: any, res) => {
+      try {
+        const request = await storage.getIntroRequest(req.params.id);
+        if (!request) {
+          return res.status(404).json({ message: "Request not found" });
         }
-        if (request.status !== "pending") {
-          return res.status(400).json({ message: "Request already processed" });
-        }
-        
-        console.log(`[FRIEND REQUEST APPROVAL] User ${currentUserId} approved friend request from ${request.fromUserId}`);
-        
-        // Update status to approved
-        const updated = await storage.updateIntroRequestStatus(request.id, "approved");
-        
-        // Add them as friends
-        await storage.addFriend(request.fromUserId, request.toUserId);
-        
-        console.log(`[FRIENDS ADDED] ${request.fromUserId} and ${request.toUserId} are now friends!`);
-        
-        res.json(updated);
-        return;
-      }
-      
-      // Handle INTRODUCTION requests (two-stage flow)
-      // Stage 1: Connector (viaUser) approves
-      if (request.viaUserId === currentUserId && request.connectorStatus === "pending") {
-        console.log(`[STAGE 1 APPROVAL] Connector ${currentUserId} approved request ${request.id}`);
-        console.log(`  Request: ${request.fromUserId} wants to meet ${request.toUserId} via ${request.viaUserId}`);
-        
-        // Update connectorStatus to approved, targetStatus stays pending
-        const updated = await storage.updateIntroRequestConnectorStatus(request.id, "approved");
-        
-        console.log(`[STAGE 2 CREATED] Target ${request.toUserId} will now see this request in their Received tab`);
-        
-        res.json(updated);
-        return;
-      }
-      
-      // Stage 2: Target (toUser) approves
-      if (request.toUserId === currentUserId && request.connectorStatus === "approved" && request.targetStatus === "pending") {
-        console.log(`[STAGE 2 APPROVAL] Target ${currentUserId} approved request ${request.id}`);
-        console.log(`  Request: ${request.fromUserId} wants to meet ${request.toUserId} via ${request.viaUserId}`);
-        
-        // Update targetStatus to approved and overall status
-        const updated = await storage.updateIntroRequestTargetStatus(request.id, "approved");
-        
-        // Now add fromUserId and toUserId as friends
-        await storage.addFriend(request.fromUserId, request.toUserId);
-        
-        console.log(`[FRIENDS ADDED] ${request.fromUserId} and ${request.toUserId} are now friends!`);
-        
-        res.json(updated);
-        return;
-      }
-      
-      // User is not authorized to approve this request at this stage
-      console.log(`[APPROVAL DENIED] User ${currentUserId} cannot approve request ${request.id}`);
-      console.log(`  viaUserId=${request.viaUserId}, toUserId=${request.toUserId}`);
-      console.log(`  connectorStatus=${request.connectorStatus}, targetStatus=${request.targetStatus}`);
-      return res.status(403).json({ message: "Forbidden - not authorized to approve at this stage" });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
 
-  app.patch("/api/intro-requests/:id/decline", requireAuth, async (req: any, res) => {
-    try {
-      const request = await storage.getIntroRequest(req.params.id);
-      if (!request) {
-        return res.status(404).json({ message: "Request not found" });
-      }
-      
-      const currentUserId = req.user.id;
-      
-      // Handle FRIEND requests
-      if (request.type === "friend") {
-        if (request.toUserId !== currentUserId) {
-          return res.status(403).json({ message: "Forbidden - not authorized to decline this request" });
+        const currentUserId = req.user.id;
+
+        // Handle FRIEND requests
+        if (request.type === "friend") {
+          if (request.toUserId !== currentUserId) {
+            return res
+              .status(403)
+              .json({
+                message: "Forbidden - not authorized to approve this request",
+              });
+          }
+          if (request.status !== "pending") {
+            return res
+              .status(400)
+              .json({ message: "Request already processed" });
+          }
+
+          console.log(
+            `[FRIEND REQUEST APPROVAL] User ${currentUserId} approved friend request from ${request.fromUserId}`
+          );
+
+          // Update status to approved
+          const updated = await storage.updateIntroRequestStatus(
+            request.id,
+            "approved"
+          );
+
+          // Add them as friends
+          await storage.addFriend(request.fromUserId, request.toUserId);
+
+          console.log(
+            `[FRIENDS ADDED] ${request.fromUserId} and ${request.toUserId} are now friends!`
+          );
+
+          res.json(updated);
+          return;
         }
-        if (request.status !== "pending") {
-          return res.status(400).json({ message: "Request already processed" });
+
+        // Handle INTRODUCTION requests (two-stage flow)
+        // Stage 1: Connector (viaUser) approves
+        if (
+          request.viaUserId === currentUserId &&
+          request.connectorStatus === "pending"
+        ) {
+          console.log(
+            `[STAGE 1 APPROVAL] Connector ${currentUserId} approved request ${request.id}`
+          );
+          console.log(
+            `  Request: ${request.fromUserId} wants to meet ${request.toUserId} via ${request.viaUserId}`
+          );
+
+          // Update connectorStatus to approved, targetStatus stays pending
+          const updated = await storage.updateIntroRequestConnectorStatus(
+            request.id,
+            "approved"
+          );
+
+          console.log(
+            `[STAGE 2 CREATED] Target ${request.toUserId} will now see this request in their Received tab`
+          );
+
+          res.json(updated);
+          return;
         }
-        
-        console.log(`[FRIEND REQUEST DECLINE] User ${currentUserId} declined friend request from ${request.fromUserId}`);
-        
-        // Update status to declined
-        const updated = await storage.updateIntroRequestStatus(request.id, "declined");
-        
-        res.json(updated);
-        return;
+
+        // Stage 2: Target (toUser) approves
+        if (
+          request.toUserId === currentUserId &&
+          request.connectorStatus === "approved" &&
+          request.targetStatus === "pending"
+        ) {
+          console.log(
+            `[STAGE 2 APPROVAL] Target ${currentUserId} approved request ${request.id}`
+          );
+          console.log(
+            `  Request: ${request.fromUserId} wants to meet ${request.toUserId} via ${request.viaUserId}`
+          );
+
+          // Update targetStatus to approved and overall status
+          const updated = await storage.updateIntroRequestTargetStatus(
+            request.id,
+            "approved"
+          );
+
+          // Now add fromUserId and toUserId as friends
+          await storage.addFriend(request.fromUserId, request.toUserId);
+
+          console.log(
+            `[FRIENDS ADDED] ${request.fromUserId} and ${request.toUserId} are now friends!`
+          );
+
+          res.json(updated);
+          return;
+        }
+
+        // User is not authorized to approve this request at this stage
+        console.log(
+          `[APPROVAL DENIED] User ${currentUserId} cannot approve request ${request.id}`
+        );
+        console.log(
+          `  viaUserId=${request.viaUserId}, toUserId=${request.toUserId}`
+        );
+        console.log(
+          `  connectorStatus=${request.connectorStatus}, targetStatus=${request.targetStatus}`
+        );
+        return res
+          .status(403)
+          .json({
+            message: "Forbidden - not authorized to approve at this stage",
+          });
+      } catch (err: any) {
+        res.status(500).json({ message: err.message });
       }
-      
-      // Handle INTRODUCTION requests
-      // Stage 1: Connector (viaUser) declines
-      if (request.viaUserId === currentUserId && request.connectorStatus === "pending") {
-        console.log(`[STAGE 1 DECLINE] Connector ${currentUserId} declined request ${request.id}`);
-        const updated = await storage.updateIntroRequestConnectorStatus(request.id, "declined");
-        res.json(updated);
-        return;
-      }
-      
-      // Stage 2: Target (toUser) declines
-      if (request.toUserId === currentUserId && request.connectorStatus === "approved" && request.targetStatus === "pending") {
-        console.log(`[STAGE 2 DECLINE] Target ${currentUserId} declined request ${request.id}`);
-        const updated = await storage.updateIntroRequestTargetStatus(request.id, "declined");
-        res.json(updated);
-        return;
-      }
-      
-      // User is not authorized to decline this request at this stage
-      console.log(`[DECLINE DENIED] User ${currentUserId} cannot decline request ${request.id}`);
-      return res.status(403).json({ message: "Forbidden - not authorized to decline at this stage" });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
     }
-  });
+  );
+
+  app.patch(
+    "/api/intro-requests/:id/decline",
+    requireAuth,
+    async (req: any, res) => {
+      try {
+        const request = await storage.getIntroRequest(req.params.id);
+        if (!request) {
+          return res.status(404).json({ message: "Request not found" });
+        }
+
+        const currentUserId = req.user.id;
+
+        // Handle FRIEND requests
+        if (request.type === "friend") {
+          if (request.toUserId !== currentUserId) {
+            return res
+              .status(403)
+              .json({
+                message: "Forbidden - not authorized to decline this request",
+              });
+          }
+          if (request.status !== "pending") {
+            return res
+              .status(400)
+              .json({ message: "Request already processed" });
+          }
+
+          console.log(
+            `[FRIEND REQUEST DECLINE] User ${currentUserId} declined friend request from ${request.fromUserId}`
+          );
+
+          // Update status to declined
+          const updated = await storage.updateIntroRequestStatus(
+            request.id,
+            "declined"
+          );
+
+          res.json(updated);
+          return;
+        }
+
+        // Handle INTRODUCTION requests
+        // Stage 1: Connector (viaUser) declines
+        if (
+          request.viaUserId === currentUserId &&
+          request.connectorStatus === "pending"
+        ) {
+          console.log(
+            `[STAGE 1 DECLINE] Connector ${currentUserId} declined request ${request.id}`
+          );
+          const updated = await storage.updateIntroRequestConnectorStatus(
+            request.id,
+            "declined"
+          );
+          res.json(updated);
+          return;
+        }
+
+        // Stage 2: Target (toUser) declines
+        if (
+          request.toUserId === currentUserId &&
+          request.connectorStatus === "approved" &&
+          request.targetStatus === "pending"
+        ) {
+          console.log(
+            `[STAGE 2 DECLINE] Target ${currentUserId} declined request ${request.id}`
+          );
+          const updated = await storage.updateIntroRequestTargetStatus(
+            request.id,
+            "declined"
+          );
+          res.json(updated);
+          return;
+        }
+
+        // User is not authorized to decline this request at this stage
+        console.log(
+          `[DECLINE DENIED] User ${currentUserId} cannot decline request ${request.id}`
+        );
+        return res
+          .status(403)
+          .json({
+            message: "Forbidden - not authorized to decline at this stage",
+          });
+      } catch (err: any) {
+        res.status(500).json({ message: err.message });
+      }
+    }
+  );
 
   // Delete user account
   app.delete("/api/users/:id", requireAuth, async (req: any, res) => {
@@ -471,10 +665,10 @@ export async function registerRoutes(
       if (!user || !user.friends || user.friends.length === 0) {
         return res.json([]);
       }
-      
+
       // Get all friends
       const friends = await storage.getUsersByIds(user.friends);
-      
+
       // Collect all friends-of-friends (excluding self and direct friends)
       const fofIds = new Set<string>();
       for (const friend of friends) {
@@ -486,17 +680,23 @@ export async function registerRoutes(
           }
         }
       }
-      
+
       if (fofIds.size === 0) {
         return res.json([]);
       }
-      
+
       const fofUsers = await storage.getUsersByIds(Array.from(fofIds));
       const fofWithoutPasswords = fofUsers.map(({ password, ...u }) => ({
         ...u,
-        mutualFriends: friends.filter(f => f.friends?.includes(u.id)).map(f => ({ id: f.id, fullName: f.fullName, photoURL: f.photoURL }))
+        mutualFriends: friends
+          .filter((f) => f.friends?.includes(u.id))
+          .map((f) => ({
+            id: f.id,
+            fullName: f.fullName,
+            photoURL: f.photoURL,
+          })),
       }));
-      
+
       res.json(fofWithoutPasswords);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
