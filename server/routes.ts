@@ -198,8 +198,8 @@ export async function registerRoutes(
       console.log("[Auth] Logging in via Passport...");
       req.login(user, (err) => {
         if (err) {
-            console.error("[Auth] Passport login error:", err);
-            return next(err);
+          console.error("[Auth] Passport login error:", err);
+          return next(err);
         }
         console.log("[Auth] Login successful");
         const { password, ...userWithoutPassword } = user;
