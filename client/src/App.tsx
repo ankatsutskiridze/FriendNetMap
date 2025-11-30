@@ -47,11 +47,11 @@ function Router() {
   }
 
   if (!user) {
-    return <AuthPage mode="login" />;
+    return <AuthPage key="login" mode="login" />;
   }
 
   if (!user.isOnboardingCompleted) {
-    return <AuthPage mode="username-setup" />;
+    return <AuthPage key="username-setup" mode="username-setup" />;
   }
 
   // Hide BottomNav on certain pages

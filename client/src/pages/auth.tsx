@@ -23,11 +23,16 @@ export default function AuthPage({ mode = "login" }: AuthPageProps) {
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
 
   const handleSocialLogin = async (provider: any) => {
+    console.log("Starting social login...");
     setLoading(true);
     try {
+      console.log("Opening popup...");
       const result = await signInWithPopup(auth, provider);
+      console.log("Popup success, getting token...");
       const token = await result.user.getIdToken();
+      console.log("Token received, logging in with backend...");
       await loginWithFirebase(token);
+      console.log("Backend login success");
       // If successful, App.tsx will re-render.
       // If isOnboardingCompleted is false, it will render AuthPage with mode="username-setup"
     } catch (error: any) {
@@ -37,6 +42,7 @@ export default function AuthPage({ mode = "login" }: AuthPageProps) {
         variant: "destructive",
       });
     } finally {
+      console.log("Social login finished (finally block)");
       setLoading(false);
     }
   };

@@ -132,29 +132,36 @@ export async function registerRoutes(
   });
 
   app.post("/api/auth/firebase", async (req, res, next) => {
+    console.log("[Auth] Firebase login request received");
     try {
       const { token } = req.body;
       if (!token) {
+        console.log("[Auth] No token provided");
         return res.status(400).json({ message: "Token is required" });
       }
 
+      console.log("[Auth] Verifying token...");
       const decodedToken = await verifyIdToken(token);
       const { uid, email, name, picture } = decodedToken;
+      console.log(`[Auth] Token verified for user: ${email} (${uid})`);
 
       // Check if user exists by firebaseUid
       let user = await storage.getUserByFirebaseUid(uid);
 
       if (!user) {
+        console.log("[Auth] User not found by UID, checking email...");
         // Check if user exists by email
         if (email) {
           user = await storage.getUserByEmail(email);
           if (user) {
+            console.log("[Auth] User found by email, linking account...");
             // Link existing user to Firebase
             user = await storage.updateUser(user.id, { firebaseUid: uid });
           }
         }
 
         if (!user) {
+          console.log("[Auth] Creating new user...");
           // Create new user
           // We need a username. Let's generate one from email or name or random.
           let username = email
@@ -176,18 +183,25 @@ export async function registerRoutes(
             password: null, // No password for social login
             isOnboardingCompleted: false,
           });
+          console.log(`[Auth] New user created: ${user.id}`);
         }
       }
 
       if (!user) {
+        console.error("[Auth] Failed to create or retrieve user");
         return res
           .status(500)
           .json({ message: "Failed to create or retrieve user" });
       }
 
       // Log the user in using Passport
+      console.log("[Auth] Logging in via Passport...");
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+            console.error("[Auth] Passport login error:", err);
+            return next(err);
+        }
+        console.log("[Auth] Login successful");
         const { password, ...userWithoutPassword } = user;
         res.json(userWithoutPassword);
       });
