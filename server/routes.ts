@@ -193,7 +193,8 @@ export async function registerRoutes(
       });
     } catch (err: any) {
       console.error("Firebase auth error:", err);
-      res.status(401).json({ message: "Invalid token" });
+      // Return the actual error message to help debugging
+      res.status(401).json({ message: err.message || "Invalid token" });
     }
   });
 
