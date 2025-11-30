@@ -22,7 +22,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch("/api/auth/me");
+        const response = await fetch("/api/auth/me", {
+          credentials: 'include', // Send cookies
+        });
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
@@ -40,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string) => {
     const response = await fetch("/api/auth/login", {
       method: "POST",
+      credentials: 'include',
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
@@ -56,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithFirebase = async (token: string) => {
     const response = await fetch("/api/auth/firebase", {
       method: "POST",
+      credentials: 'include',
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
     });
@@ -72,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (data: { username: string; password: string; fullName: string }) => {
     const response = await fetch("/api/auth/register", {
       method: "POST",
+      credentials: 'include',
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
@@ -86,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch("/api/auth/logout", { method: "POST", credentials: 'include' });
     setUser(null);
   };
 

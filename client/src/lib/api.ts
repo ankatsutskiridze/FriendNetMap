@@ -9,6 +9,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const fullUrl = url.startsWith("/") ? BASE_URL + url : url;
   const res = await fetch(fullUrl, {
     ...options,
+    credentials: 'include', // CRITICAL: Send cookies with requests
     headers: {
       "Content-Type": "application/json",
       ...options?.headers,

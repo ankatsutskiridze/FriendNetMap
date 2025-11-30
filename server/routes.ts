@@ -40,6 +40,8 @@ export async function registerRoutes(
   // Session setup
   const PgSession = connectPgSimple(session);
 
+  const isProduction = process.env.NODE_ENV === "production";
+
   app.use(
     session({
       store: new PgSession({
@@ -49,7 +51,13 @@ export async function registerRoutes(
       secret: process.env.SESSION_SECRET || "friends-map-secret-key",
       resave: false,
       saveUninitialized: false,
-      cookie: { secure: false, maxAge: 30 * 24 * 60 * 60 * 1000 },
+      cookie: { 
+        secure: isProduction, // true in production (HTTPS), false in dev
+        httpOnly: true,
+        sameSite: isProduction ? 'none' : 'lax', // 'none' for production cross-origin
+        maxAge: 30 * 24 * 60 * 60 * 1000 
+      },
+      proxy: isProduction, // trust first proxy (Render's load balancer)
     })
   );
 
