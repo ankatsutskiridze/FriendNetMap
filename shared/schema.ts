@@ -28,6 +28,7 @@ export const users = pgTable("users", {
   friends: text("friends")
     .array()
     .default(sql`ARRAY[]::text[]`),
+  isOnboardingCompleted: boolean("is_onboarding_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

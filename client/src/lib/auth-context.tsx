@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import type { User } from "@shared/schema";
 
-type AuthUser = Omit<User, "password">;
+type AuthUser = Omit<User, "password"> & { isOnboardingCompleted?: boolean };
 
 interface AuthContextType {
   user: AuthUser | null;

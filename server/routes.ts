@@ -174,6 +174,7 @@ export async function registerRoutes(
             fullName: name || "New User",
             photoURL: picture,
             password: null, // No password for social login
+            isOnboardingCompleted: false,
           });
         }
       }
@@ -194,6 +195,15 @@ export async function registerRoutes(
       console.error("Firebase auth error:", err);
       res.status(401).json({ message: "Invalid token" });
     }
+  });
+
+  app.get("/api/auth/check-username", async (req, res) => {
+    const username = req.query.username as string;
+    if (!username) {
+      return res.status(400).json({ message: "Username is required" });
+    }
+    const user = await storage.getUserByUsername(username);
+    res.json({ available: !user });
   });
 
   app.get("/api/auth/me", requireAuth, (req: any, res) => {
@@ -442,11 +452,9 @@ export async function registerRoutes(
         // Handle FRIEND requests
         if (request.type === "friend") {
           if (request.toUserId !== currentUserId) {
-            return res
-              .status(403)
-              .json({
-                message: "Forbidden - not authorized to approve this request",
-              });
+            return res.status(403).json({
+              message: "Forbidden - not authorized to approve this request",
+            });
           }
           if (request.status !== "pending") {
             return res
@@ -542,11 +550,9 @@ export async function registerRoutes(
         console.log(
           `  connectorStatus=${request.connectorStatus}, targetStatus=${request.targetStatus}`
         );
-        return res
-          .status(403)
-          .json({
-            message: "Forbidden - not authorized to approve at this stage",
-          });
+        return res.status(403).json({
+          message: "Forbidden - not authorized to approve at this stage",
+        });
       } catch (err: any) {
         res.status(500).json({ message: err.message });
       }
@@ -568,11 +574,9 @@ export async function registerRoutes(
         // Handle FRIEND requests
         if (request.type === "friend") {
           if (request.toUserId !== currentUserId) {
-            return res
-              .status(403)
-              .json({
-                message: "Forbidden - not authorized to decline this request",
-              });
+            return res.status(403).json({
+              message: "Forbidden - not authorized to decline this request",
+            });
           }
           if (request.status !== "pending") {
             return res
@@ -632,11 +636,9 @@ export async function registerRoutes(
         console.log(
           `[DECLINE DENIED] User ${currentUserId} cannot decline request ${request.id}`
         );
-        return res
-          .status(403)
-          .json({
-            message: "Forbidden - not authorized to decline at this stage",
-          });
+        return res.status(403).json({
+          message: "Forbidden - not authorized to decline at this stage",
+        });
       } catch (err: any) {
         res.status(500).json({ message: err.message });
       }
