@@ -3,6 +3,8 @@ import { type Server } from "http";
 import { storage } from "./storage";
 import { verifyIdToken } from "./firebase";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "../db";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import {
@@ -36,8 +38,14 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   // Session setup
+  const PgSession = connectPgSimple(session);
+
   app.use(
     session({
+      store: new PgSession({
+        pool: pool as any,
+        createTableIfMissing: true,
+      }),
       secret: process.env.SESSION_SECRET || "friends-map-secret-key",
       resave: false,
       saveUninitialized: false,

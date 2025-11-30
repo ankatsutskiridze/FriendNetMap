@@ -50,6 +50,13 @@ export default function ProfilePage() {
   }
 
   if (!user) {
+    if (isOwnProfile && !isLoading) {
+      // If it's our own profile but we have no user data, something is wrong with the session
+      // Redirect to login
+      window.location.href = "/auth";
+      return null;
+    }
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-white flex items-center justify-center">
         <p className="text-muted-foreground">User not found</p>
