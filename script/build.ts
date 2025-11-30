@@ -35,6 +35,9 @@ const allowlist = [
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
+  // Clear VITE_API_URL for production build (use relative paths)
+  delete process.env.VITE_API_URL;
+
   console.log("building client...");
   await viteBuild();
 
