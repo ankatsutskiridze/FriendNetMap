@@ -47,6 +47,7 @@ export async function registerRoutes(
       store: new PgSession({
         pool: pool as any,
         createTableIfMissing: true,
+        tableName: 'session', // Explicit table name
       }),
       secret: process.env.SESSION_SECRET || "friends-map-secret-key",
       resave: false,
@@ -54,10 +55,12 @@ export async function registerRoutes(
       cookie: { 
         secure: isProduction, // true in production (HTTPS), false in dev
         httpOnly: true,
-        sameSite: isProduction ? 'none' : 'lax', // 'none' for production cross-origin
-        maxAge: 30 * 24 * 60 * 60 * 1000 
+        sameSite: 'lax', // 'lax' works for same-origin (Render serves everything from one domain)
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: '/', // Explicit path
       },
       proxy: isProduction, // trust first proxy (Render's load balancer)
+      name: 'connect.sid', // Explicit session cookie name
     })
   );
 
@@ -98,9 +101,11 @@ export async function registerRoutes(
 
   // Middleware to check authentication
   const requireAuth = (req: any, res: any, next: any) => {
+    console.log(`[Auth Middleware] Path: ${req.path}, Authenticated: ${req.isAuthenticated()}, Session: ${req.sessionID}`);
     if (req.isAuthenticated()) {
       return next();
     }
+    console.log(`[Auth Middleware] Unauthorized - no valid session`);
     res.status(401).json({ message: "Unauthorized" });
   };
 
@@ -131,13 +136,19 @@ export async function registerRoutes(
   });
 
   app.post("/api/auth/login", (req, res, next) => {
+    console.log('[Login] Attempting login for:', req.body.username);
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
       if (!user) {
+        console.log('[Login] Failed:', info.message);
         return res.status(400).json({ message: info.message });
       }
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.log('[Login] Session error:', err);
+          return next(err);
+        }
+        console.log('[Login] Success! Session ID:', req.sessionID, 'User ID:', user.id);
         const { password, ...userWithoutPassword } = user;
         res.json(userWithoutPassword);
       });
@@ -253,6 +264,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/auth/me", requireAuth, (req: any, res) => {
+    console.log(`[Auth Check] Session ID: ${req.sessionID}, User: ${req.user?.id || 'none'}`);
     const { password, ...userWithoutPassword } = req.user;
     res.json(userWithoutPassword);
   });

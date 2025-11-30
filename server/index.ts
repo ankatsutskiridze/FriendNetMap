@@ -28,22 +28,21 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-// CORS Middleware
+// IMPORTANT: Move session setup before routes
+// This is now handled in registerRoutes but middleware order matters
+
+// CORS Middleware - simplified for same-origin on Render
 app.use((req, res, next) => {
-  const allowedOrigins = [
-    process.env.CLIENT_ORIGIN,
-    "http://localhost:5000",
-    "http://localhost:5173",
-  ];
   const origin = req.headers.origin;
-  if (
-    origin &&
-    (allowedOrigins.includes(origin) ||
-      !process.env.NODE_ENV ||
-      process.env.NODE_ENV === "development")
-  ) {
-    res.header("Access-Control-Allow-Origin", origin);
+  const isProduction = process.env.NODE_ENV === "production";
+  
+  // In production on Render, everything is same-origin (no CORS needed)
+  // In development, allow localhost origins
+  if (!isProduction || origin) {
+    res.header("Access-Control-Allow-Origin", origin || "*");
+    res.header("Access-Control-Allow-Credentials", "true");
   }
+  
   res.header(
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, DELETE, PATCH, OPTIONS"
@@ -52,7 +51,7 @@ app.use((req, res, next) => {
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
-  res.header("Access-Control-Allow-Credentials", "true");
+  
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
