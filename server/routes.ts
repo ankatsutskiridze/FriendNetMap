@@ -47,20 +47,20 @@ export async function registerRoutes(
       store: new PgSession({
         pool: pool as any,
         createTableIfMissing: true,
-        tableName: 'session', // Explicit table name
+        tableName: "session", // Explicit table name
       }),
       secret: process.env.SESSION_SECRET || "friends-map-secret-key",
       resave: false,
       saveUninitialized: false,
-      cookie: { 
+      cookie: {
         secure: isProduction, // true in production (HTTPS), false in dev
         httpOnly: true,
-        sameSite: 'lax', // 'lax' works for same-origin (Render serves everything from one domain)
+        sameSite: "lax", // 'lax' works for same-origin (Render serves everything from one domain)
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        path: '/', // Explicit path
+        path: "/", // Explicit path
       },
       proxy: isProduction, // trust first proxy (Render's load balancer)
-      name: 'connect.sid', // Explicit session cookie name
+      name: "connect.sid", // Explicit session cookie name
     })
   );
 
@@ -101,7 +101,11 @@ export async function registerRoutes(
 
   // Middleware to check authentication
   const requireAuth = (req: any, res: any, next: any) => {
-    console.log(`[Auth Middleware] Path: ${req.path}, Authenticated: ${req.isAuthenticated()}, Session: ${req.sessionID}`);
+    console.log(
+      `[Auth Middleware] Path: ${
+        req.path
+      }, Authenticated: ${req.isAuthenticated()}, Session: ${req.sessionID}`
+    );
     if (req.isAuthenticated()) {
       return next();
     }
@@ -136,19 +140,24 @@ export async function registerRoutes(
   });
 
   app.post("/api/auth/login", (req, res, next) => {
-    console.log('[Login] Attempting login for:', req.body.username);
+    console.log("[Login] Attempting login for:", req.body.username);
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
       if (!user) {
-        console.log('[Login] Failed:', info.message);
+        console.log("[Login] Failed:", info.message);
         return res.status(400).json({ message: info.message });
       }
       req.login(user, (err) => {
         if (err) {
-          console.log('[Login] Session error:', err);
+          console.log("[Login] Session error:", err);
           return next(err);
         }
-        console.log('[Login] Success! Session ID:', req.sessionID, 'User ID:', user.id);
+        console.log(
+          "[Login] Success! Session ID:",
+          req.sessionID,
+          "User ID:",
+          user.id
+        );
         const { password, ...userWithoutPassword } = user;
         res.json(userWithoutPassword);
       });
@@ -210,11 +219,19 @@ export async function registerRoutes(
             ? email.split("@")[0]
             : `user_${uid.substring(0, 8)}`;
 
-          // Ensure username is unique (simple retry or check)
-          let existingUsername = await storage.getUserByUsername(username);
-          if (existingUsername) {
-            username = `${username}_${Math.floor(Math.random() * 1000)}`;
+          // Ensure username is unique (retry loop)
+          let uniqueUsername = username;
+          let counter = 0;
+          while (await storage.getUserByUsername(uniqueUsername)) {
+            counter++;
+            uniqueUsername = `${username}_${Math.floor(Math.random() * 10000)}`;
+            if (counter > 5) {
+              // Fallback to using timestamp if random fails
+              uniqueUsername = `${username}_${Date.now()}`;
+              break;
+            }
           }
+          username = uniqueUsername;
 
           user = await storage.createUser({
             username,
@@ -264,7 +281,11 @@ export async function registerRoutes(
   });
 
   app.get("/api/auth/me", requireAuth, (req: any, res) => {
-    console.log(`[Auth Check] Session ID: ${req.sessionID}, User: ${req.user?.id || 'none'}`);
+    console.log(
+      `[Auth Check] Session ID: ${req.sessionID}, User: ${
+        req.user?.id || "none"
+      }`
+    );
     const { password, ...userWithoutPassword } = req.user;
     res.json(userWithoutPassword);
   });

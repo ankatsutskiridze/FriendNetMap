@@ -37,8 +37,20 @@ export default function AuthPage({ mode = "login" }: AuthPageProps) {
       // If isOnboardingCompleted is false, it will render AuthPage with mode="username-setup"
     } catch (error: any) {
       console.error("Social login error:", error);
+      console.error("Error code:", error.code);
+      console.error("Error message:", error.message);
+      
+      let message = "Social login failed";
+      if (error.code === 'auth/popup-closed-by-user') {
+        message = "Login cancelled";
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        message = "An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.";
+      } else if (error.message) {
+        message = error.message;
+      }
+
       toast({
-        description: error.message || "Social login failed",
+        description: message,
         variant: "destructive",
       });
     } finally {
