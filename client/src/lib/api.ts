@@ -15,6 +15,13 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     },
   });
   if (!res.ok) {
+    if (res.status === 401) {
+      // Redirect to login if session expired
+      // Use window.location to force a refresh and clear AuthContext state
+      if (window.location.pathname !== "/auth") {
+        window.location.href = "/auth";
+      }
+    }
     const error = await res.json().catch(() => ({ message: "Request failed" }));
     throw new Error(error.message);
   }

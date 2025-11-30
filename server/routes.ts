@@ -53,7 +53,7 @@ export async function registerRoutes(
     new LocalStrategy(async (username, password, done) => {
       try {
         const user = await storage.getUserByUsername(username);
-        if (!user) {
+        if (!user || !user.password) {
           return done(null, false, { message: "Invalid username or password" });
         }
         const isValid = await comparePassword(password, user.password);
@@ -95,6 +95,9 @@ export async function registerRoutes(
       const existing = await storage.getUserByUsername(parsed.username);
       if (existing) {
         return res.status(400).json({ message: "Username already exists" });
+      }
+      if (!parsed.password) {
+        return res.status(400).json({ message: "Password is required" });
       }
       const hashedPassword = await hashPassword(parsed.password);
       const user = await storage.createUser({
@@ -155,8 +158,20 @@ export async function registerRoutes(
           user = await storage.getUserByEmail(email);
           if (user) {
             console.log("[Auth] User found by email, linking account...");
-            // Link existing user to Firebase
-            user = await storage.updateUser(user.id, { firebaseUid: uid });
+            // Link existing user to Firebase and update profile if missing
+            const updates: any = { firebaseUid: uid };
+
+            // Update fullName if it's missing or default
+            if (name && (!user.fullName || user.fullName === "New User")) {
+              updates.fullName = name;
+            }
+
+            // Update photoURL if it's missing
+            if (picture && !user.photoURL) {
+              updates.photoURL = picture;
+            }
+
+            user = await storage.updateUser(user.id, updates);
           }
         }
 

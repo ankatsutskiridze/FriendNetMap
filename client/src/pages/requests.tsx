@@ -59,13 +59,13 @@ export default function RequestsPage() {
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const { data: currentUser } = useCurrentUser();
+  const { data: currentUser, isError: isUserError } = useCurrentUser();
   const { data: receivedRequests = [], isLoading: receivedLoading } = useIntroRequestsReceived();
   const { data: sentRequests = [], isLoading: sentLoading } = useIntroRequestsSent();
   const approveRequest = useApproveIntroRequest();
   const declineRequest = useDeclineIntroRequest();
 
-  const isLoading = receivedLoading || sentLoading || !currentUser;
+  const isLoading = (receivedLoading || sentLoading || !currentUser) && !isUserError;
 
   // Determine the role/type for each received request
   const getReceivedRequestRole = (req: any) => {
