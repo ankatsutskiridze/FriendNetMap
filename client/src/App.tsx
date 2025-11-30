@@ -19,9 +19,17 @@ import NotFound from "@/pages/not-found";
 import { BottomNav } from "@/components/bottom-nav";
 import { useLocation } from "wouter";
 
+function Redirect({ to }: { to: string }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(to);
+  }, [to, setLocation]);
+  return null;
+}
+
 function Router() {
   const { user, loading } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [hasSeenIntro, setHasSeenIntro] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -47,6 +55,9 @@ function Router() {
   }
 
   if (!user) {
+    if (location !== "/auth") {
+      return <Redirect to="/auth" />;
+    }
     return <AuthPage key="login" mode="login" />;
   }
 
@@ -71,6 +82,9 @@ function Router() {
         <Route path="/settings" component={SettingsPage} />
         <Route path="/request-intro/:id" component={RequestIntroPage} />
         <Route path="/find-friends" component={FindFriendsPage} />
+        <Route path="/auth">
+          <Redirect to="/" />
+        </Route>
         <Route component={NotFound} />
       </Switch>
       {showBottomNav && <BottomNav />}
