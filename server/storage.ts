@@ -343,6 +343,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<void> {
+    // 1. Delete user settings
+    await db.delete(userSettings).where(eq(userSettings.userId, id));
+
+    // 2. Delete intro requests involving the user
+    await db.delete(introRequests).where(
+      or(
+        eq(introRequests.fromUserId, id),
+        eq(introRequests.toUserId, id),
+        eq(introRequests.viaUserId, id)
+      )
+    );
+
+    // 3. Remove user from friends lists of other users
+    await db.execute(sql`
+      UPDATE ${users}
+      SET friends = array_remove(friends, ${id})
+      WHERE ${id} = ANY(friends)
+    `);
+
+    // 4. Delete the user
     await db.delete(users).where(eq(users.id, id));
   }
 
