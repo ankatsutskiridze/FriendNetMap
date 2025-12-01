@@ -6,10 +6,10 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { auth, googleProvider, facebookProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
-import { Facebook, Check, X, Loader2 } from "lucide-react";
+import { Facebook, Check, X, Loader2, Instagram, MessageCircle, ChevronRight } from "lucide-react";
 
 interface AuthPageProps {
-  mode?: "login" | "username-setup";
+  mode?: "login" | "onboarding";
 }
 
 export default function AuthPage({ mode = "login" }: AuthPageProps) {
@@ -21,6 +21,16 @@ export default function AuthPage({ mode = "login" }: AuthPageProps) {
   const [username, setUsername] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
+
+  // Onboarding step state
+  const [step, setStep] = useState<"username" | "socials">("username");
+
+  // Social setup state
+  const [socials, setSocials] = useState({
+    instagram: "",
+    whatsapp: "",
+    facebook: ""
+  });
 
   const handleSocialLogin = async (provider: any) => {
     console.log("Starting social login...");
@@ -34,7 +44,7 @@ export default function AuthPage({ mode = "login" }: AuthPageProps) {
       await loginWithFirebase(token);
       console.log("Backend login success");
       // If successful, App.tsx will re-render.
-      // If isOnboardingCompleted is false, it will render AuthPage with mode="username-setup"
+      // If isOnboardingCompleted is false, it will render AuthPage with mode="onboarding"
     } catch (error: any) {
       console.error("Social login error:", error);
       console.error("Error code:", error.code);
@@ -91,18 +101,20 @@ export default function AuthPage({ mode = "login" }: AuthPageProps) {
     setLoading(true);
 
     try {
-      // Update user with new username and set isOnboardingCompleted = true
+      // Update user with new username. 
+      // We do NOT set isOnboardingCompleted: true here anymore, 
+      // because we want to show the social setup step next.
       const res = await fetch(`/api/users/${user?.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, isOnboardingCompleted: true }),
+        body: JSON.stringify({ username }),
       });
 
       if (!res.ok) throw new Error("Failed to update username");
       
       const updatedUser = await res.json();
       updateUser(updatedUser);
-      // App.tsx will re-render and show Home
+      setStep("socials");
     } catch (error: any) {
       toast({
         description: error.message || "Failed to set username",
@@ -113,7 +125,175 @@ export default function AuthPage({ mode = "login" }: AuthPageProps) {
     }
   };
 
-  if (mode === "username-setup") {
+  const handleSocialsSubmit = async (skip = false) => {
+    setLoading(true);
+    try {
+      const body = skip ? { isOnboardingCompleted: true } : {
+        instagramHandle: socials.instagram,
+        whatsappNumber: socials.whatsapp,
+        facebookHandle: socials.facebook,
+        isOnboardingCompleted: true
+      };
+
+      const res = await fetch(`/api/users/${user?.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error("Failed to update profile");
+      
+      const updatedUser = await res.json();
+      updateUser(updatedUser);
+      // App.tsx will re-render and show Home
+    } catch (error: any) {
+      toast({
+        description: error.message || "Failed to update profile",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (mode === "onboarding" && step === "socials") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-white font-sans flex items-center justify-center p-6 relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute top-[-20%] right-[-20%] w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-[-20%] left-[-20%] w-96 h-96 bg-secondary/10 rounded-full blur-3xl" />
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md relative z-10"
+        >
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="text-center space-y-3 mb-8"
+          >
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              Add your socials
+            </h1>
+            <p className="text-muted-foreground text-base leading-relaxed">
+              Make it easy for people to reach you after an introduction.
+            </p>
+          </motion.div>
+
+          {/* Social Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", damping: 12 }}
+            className="bg-white/80 backdrop-blur-xl rounded-3xl border border-white shadow-lg overflow-hidden divide-y divide-gray-100 mb-8"
+          >
+            {/* Instagram Row */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="p-5 flex items-center gap-4 hover:bg-white/50 transition-colors group"
+            >
+              <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-pink-500 via-red-500 to-yellow-500 flex items-center justify-center shrink-0 shadow-md">
+                <Instagram className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs font-bold text-foreground block mb-2 uppercase tracking-wider">Instagram</label>
+                <Input 
+                  value={socials.instagram}
+                  onChange={(e) => setSocials({...socials, instagram: e.target.value})}
+                  className="h-8 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/50 text-sm font-medium focus-visible:outline-none"
+                  placeholder="@username"
+                />
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-primary transition-colors shrink-0" />
+            </motion.div>
+
+            {/* WhatsApp Row */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="p-5 flex items-center gap-4 hover:bg-white/50 transition-colors group"
+            >
+              <div className="w-11 h-11 rounded-full bg-green-500 flex items-center justify-center shrink-0 shadow-md">
+                <MessageCircle className="w-5 h-5 text-white" fill="currentColor" />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs font-bold text-foreground block mb-2 uppercase tracking-wider">WhatsApp</label>
+                <Input 
+                  value={socials.whatsapp}
+                  onChange={(e) => setSocials({...socials, whatsapp: e.target.value})}
+                  className="h-8 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/50 text-sm font-medium focus-visible:outline-none"
+                  placeholder="Add phone number"
+                />
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-primary transition-colors shrink-0" />
+            </motion.div>
+
+            {/* Facebook Row */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="p-5 flex items-center gap-4 hover:bg-white/50 transition-colors group"
+            >
+              <div className="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-md">
+                <Facebook className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs font-bold text-foreground block mb-2 uppercase tracking-wider">Facebook</label>
+                <Input 
+                  value={socials.facebook}
+                  onChange={(e) => setSocials({...socials, facebook: e.target.value})}
+                  className="h-8 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/50 text-sm font-medium focus-visible:outline-none"
+                  placeholder="Connect account"
+                />
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-primary transition-colors shrink-0" />
+            </motion.div>
+          </motion.div>
+
+          {/* Action Buttons */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="space-y-3"
+          >
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Button 
+                className="w-full h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-purple-500 hover:opacity-90 transition-opacity text-white"
+                size="lg"
+                onClick={() => handleSocialsSubmit(false)}
+                disabled={loading}
+              >
+                {loading ? "Saving..." : "Finish setup"}
+              </Button>
+            </motion.div>
+
+            <motion.button 
+              whileHover={{ opacity: 0.8 }}
+              onClick={() => handleSocialsSubmit(true)}
+              disabled={loading}
+              className="w-full text-muted-foreground hover:text-foreground transition-colors font-medium py-2.5 text-sm"
+            >
+              Skip for now
+            </motion.button>
+          </motion.div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (mode === "onboarding" && step === "username") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-white font-sans flex items-center justify-center p-6">
         <motion.div

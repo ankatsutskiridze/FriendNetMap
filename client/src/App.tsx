@@ -62,7 +62,7 @@ function Router() {
   }
 
   if (!user.isOnboardingCompleted) {
-    return <AuthPage key="username-setup" mode="username-setup" />;
+    return <AuthPage key="onboarding" mode="onboarding" />;
   }
 
   // Hide BottomNav on certain pages
