@@ -93,6 +93,11 @@ export async function registerRoutes(
   passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUser(id);
+      if (!user) {
+        // If user is not found (e.g. deleted), explicitly return false
+        // This tells Passport to invalidate the session instead of throwing an error
+        return done(null, false);
+      }
       done(null, user);
     } catch (err) {
       done(err);
