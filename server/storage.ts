@@ -347,13 +347,15 @@ export class DatabaseStorage implements IStorage {
     await db.delete(userSettings).where(eq(userSettings.userId, id));
 
     // 2. Delete intro requests involving the user
-    await db.delete(introRequests).where(
-      or(
-        eq(introRequests.fromUserId, id),
-        eq(introRequests.toUserId, id),
-        eq(introRequests.viaUserId, id)
-      )
-    );
+    await db
+      .delete(introRequests)
+      .where(
+        or(
+          eq(introRequests.fromUserId, id),
+          eq(introRequests.toUserId, id),
+          eq(introRequests.viaUserId, id)
+        )
+      );
 
     // 3. Remove user from friends lists of other users
     await db.execute(sql`
