@@ -202,7 +202,7 @@ export class DatabaseStorage implements IStorage {
         .set({ friends: sql`array_remove(${users.friends}, ${friendId})` })
         .where(eq(users.id, userId));
 
-      // Remove userId from friendId's friends array
+      // Remove userId from friendId's friends array //
       await tx
         .update(users)
         .set({ friends: sql`array_remove(${users.friends}, ${userId})` })
