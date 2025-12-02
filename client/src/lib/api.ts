@@ -5,11 +5,13 @@ type UserWithoutPassword = Omit<User, "password">;
 
 const BASE_URL = import.meta.env.VITE_API_URL || "";
 
+console.log("Current API URL:", BASE_URL); // Debugging log
+
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const fullUrl = url.startsWith("/") ? BASE_URL + url : url;
   const res = await fetch(fullUrl, {
     ...options,
-    credentials: 'include', // CRITICAL: Send cookies with requests
+    credentials: "include", // CRITICAL: Send cookies with requests
     headers: {
       "Content-Type": "application/json",
       ...options?.headers,
