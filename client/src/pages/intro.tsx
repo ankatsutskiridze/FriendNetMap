@@ -46,7 +46,6 @@ export default function IntroPage({ onComplete }: IntroPageProps) {
   const isFirstSlide = currentSlide === 0;
 
   const completeIntro = () => {
-    localStorage.setItem("hasSeenIntro", "true");
     onComplete();
   };
 

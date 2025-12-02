@@ -30,14 +30,9 @@ function Redirect({ to }: { to: string }) {
 function Router() {
   const { user, loading } = useAuth();
   const [location, setLocation] = useLocation();
-  const [hasSeenIntro, setHasSeenIntro] = useState<boolean | null>(null);
+  const [hasSeenIntro, setHasSeenIntro] = useState(false);
 
-  useEffect(() => {
-    const seen = localStorage.getItem("hasSeenIntro") === "true";
-    setHasSeenIntro(seen);
-  }, []);
-
-  if (loading || hasSeenIntro === null) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-white flex items-center justify-center">
         <div className="text-center">
