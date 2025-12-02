@@ -199,7 +199,7 @@ export async function registerRoutes(
           user = await storage.getUserByEmail(email);
           if (user) {
             console.log("[Auth] User found by email, linking account...");
-            // Link existing user to Firebase and update profile if missing
+            // Link existing user to Firebase and update profile if missing //
             const updates: any = { firebaseUid: uid };
 
             // Update fullName if it's missing or default
