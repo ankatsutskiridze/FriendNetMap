@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { auth, googleProvider, facebookProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 import { Facebook, Check, X, Loader2, Instagram, MessageCircle, ChevronRight } from "lucide-react";
+import { BASE_URL } from "@/lib/api";
 
 interface AuthPageProps {
   mode?: "login" | "onboarding";
@@ -78,7 +79,7 @@ export default function AuthPage({ mode = "login" }: AuthPageProps) {
       }
       setIsChecking(true);
       try {
-        const res = await fetch(`/api/auth/check-username?username=${username}`);
+        const res = await fetch(`${BASE_URL}/api/auth/check-username?username=${username}`);
         const data = await res.json();
         setIsAvailable(data.available);
       } catch (error) {
@@ -104,7 +105,7 @@ export default function AuthPage({ mode = "login" }: AuthPageProps) {
       // Update user with new username. 
       // We do NOT set isOnboardingCompleted: true here anymore, 
       // because we want to show the social setup step next.
-      const res = await fetch(`/api/users/${user?.id}`, {
+      const res = await fetch(`${BASE_URL}/api/users/${user?.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username }),
@@ -135,7 +136,7 @@ export default function AuthPage({ mode = "login" }: AuthPageProps) {
         isOnboardingCompleted: true
       };
 
-      const res = await fetch(`/api/users/${user?.id}`, {
+      const res = await fetch(`${BASE_URL}/api/users/${user?.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

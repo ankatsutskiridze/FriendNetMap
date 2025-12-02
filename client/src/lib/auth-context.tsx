@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import type { User } from "@shared/schema";
+import { BASE_URL } from "./api";
 
 type AuthUser = Omit<User, "password"> & { isOnboardingCompleted?: boolean };
 
@@ -22,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch("/api/auth/me", {
+        const response = await fetch(`${BASE_URL}/api/auth/me`, {
           credentials: 'include', // Send cookies
         });
         if (response.ok) {
@@ -40,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (username: string, password: string) => {
-    const response = await fetch("/api/auth/login", {
+    const response = await fetch(`${BASE_URL}/api/auth/login`, {
       method: "POST",
       credentials: 'include',
       headers: { "Content-Type": "application/json" },
@@ -57,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithFirebase = async (token: string) => {
-    const response = await fetch("/api/auth/firebase", {
+    const response = await fetch(`${BASE_URL}/api/auth/firebase`, {
       method: "POST",
       credentials: 'include',
       headers: { "Content-Type": "application/json" },
@@ -74,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (data: { username: string; password: string; fullName: string }) => {
-    const response = await fetch("/api/auth/register", {
+    const response = await fetch(`${BASE_URL}/api/auth/register`, {
       method: "POST",
       credentials: 'include',
       headers: { "Content-Type": "application/json" },
@@ -91,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: 'include' });
+    await fetch(`${BASE_URL}/api/auth/logout`, { method: "POST", credentials: 'include' });
     setUser(null);
   };
 

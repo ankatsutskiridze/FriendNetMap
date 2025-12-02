@@ -3,11 +3,14 @@ import type { User, IntroRequest, UserSettings } from "@shared/schema";
 
 type UserWithoutPassword = Omit<User, "password">;
 
-const BASE_URL = import.meta.env.VITE_API_URL || "";
+export const BASE_URL = import.meta.env.VITE_API_URL || "";
 
 console.log("Current API URL:", BASE_URL); // Debugging log
 
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+export async function fetchJson<T>(
+  url: string,
+  options?: RequestInit
+): Promise<T> {
   const fullUrl = url.startsWith("/") ? BASE_URL + url : url;
   const res = await fetch(fullUrl, {
     ...options,

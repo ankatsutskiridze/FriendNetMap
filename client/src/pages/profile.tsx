@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useLocation, useRoute } from "wouter";
-import { useCurrentUser, useUser, useFriends } from "@/lib/api";
+import { useCurrentUser, useUser, useFriends, BASE_URL } from "@/lib/api";
 
 import imgWoman from "@assets/generated_images/friendly_young_woman_avatar.png";
 
@@ -34,7 +34,7 @@ export default function ProfilePage() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch(`${BASE_URL}/api/auth/logout`, { method: "POST" });
       window.location.href = "/auth";
     } catch (err) {
       console.error("Logout failed:", err);
