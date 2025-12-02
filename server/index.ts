@@ -9,7 +9,7 @@ const httpServer = createServer(app);
 
 // Trust proxy for Render deployment
 if (process.env.NODE_ENV === "production") {
-  app.set('trust proxy', 1);
+  app.set("trust proxy", 1);
 }
 
 declare module "http" {
@@ -35,14 +35,23 @@ app.use(express.urlencoded({ extended: false }));
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const isProduction = process.env.NODE_ENV === "production";
-  
+  const allowedOrigin = process.env.ALLOWED_ORIGIN;
+
   // In production on Render, everything is same-origin (no CORS needed)
   // In development, allow localhost origins
+  // For split deployment, allow the specific frontend origin
   if (!isProduction || origin) {
-    res.header("Access-Control-Allow-Origin", origin || "*");
+    if (allowedOrigin && origin === allowedOrigin) {
+      res.header("Access-Control-Allow-Origin", allowedOrigin);
+    } else if (!isProduction) {
+      res.header("Access-Control-Allow-Origin", origin || "*");
+    } else {
+      // Fallback for same-origin or if ALLOWED_ORIGIN is not set (monolith)
+      res.header("Access-Control-Allow-Origin", origin || "*");
+    }
     res.header("Access-Control-Allow-Credentials", "true");
   }
-  
+
   res.header(
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, DELETE, PATCH, OPTIONS"
@@ -51,7 +60,7 @@ app.use((req, res, next) => {
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
-  
+
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
@@ -110,7 +119,11 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
+    try {
+      serveStatic(app);
+    } catch (e) {
+      log("Static files not found, running in API-only mode");
+    }
   } else {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);

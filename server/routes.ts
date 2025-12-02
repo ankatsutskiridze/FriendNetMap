@@ -55,7 +55,7 @@ export async function registerRoutes(
       cookie: {
         secure: isProduction, // true in production (HTTPS), false in dev
         httpOnly: true,
-        sameSite: "lax", // 'lax' works for same-origin (Render serves everything from one domain)
+        sameSite: isProduction ? "none" : "lax", // 'none' for cross-site (split deployment), 'lax' for dev
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: "/", // Explicit path
       },
